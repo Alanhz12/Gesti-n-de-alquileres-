@@ -477,6 +477,52 @@ body {
     box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
 }
 
+/* ===== CORRECCIONES PARA CALENDARIO ===== */
+.month-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 16px;
+    border: 2px solid var(--gray-light);
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.month-controls h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    text-align: center;
+    flex: 1;
+}
+
+.month-nav {
+    display: flex;
+    gap: 10px;
+}
+
+.month-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    background: white;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: bold;
+}
+
+.month-nav-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
 /* Calendario Móvil Optimizado */
 .mobile-calendar {
     background: white;
@@ -536,9 +582,21 @@ body {
     opacity: 0.3;
 }
 
+/* ===== MEJORAS EN CALENDARIO MOBILE ===== */
 .calendar-day.occupied {
     background: rgba(247, 37, 133, 0.1);
     border-color: #f72585;
+    position: relative;
+}
+
+.calendar-day.checkin {
+    background: rgba(76, 175, 80, 0.1);
+    border-color: #4caf50;
+}
+
+.calendar-day.checkout {
+    background: rgba(255, 152, 0, 0.1);
+    border-color: #ff9800;
 }
 
 .calendar-day-number {
@@ -549,8 +607,9 @@ body {
 
 .calendar-day-status {
     display: flex;
-    gap: 2px;
-    margin-top: 4px;
+    gap: 3px;
+    margin-top: 2px;
+    justify-content: center;
 }
 
 .status-dot {
@@ -913,6 +972,19 @@ body {
     color: white;
 }
 
+/* ===== CORRECCIONES PARA BOTONES CANCELAR ===== */
+.modal-footer .btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    transform: translateY(-2px);
+}
+
 /* Formulario Mejorado */
 .form-grid {
     display: grid;
@@ -1044,7 +1116,7 @@ body {
     gap: 12px;
 }
 
-/* Notificaciones Mejoradas */
+/* ===== MEJORAS EN NOTIFICACIONES ===== */
 .notification {
     position: fixed;
     bottom: 32px;
@@ -1061,6 +1133,7 @@ body {
     align-items: center;
     gap: 12px;
     max-width: 90%;
+    min-width: 300px;
 }
 
 .notification.show {
@@ -1079,26 +1152,15 @@ body {
     background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
 }
 
+.notification.info {
+    background: linear-gradient(135deg, #4361ee 0%, #3a56d4 100%);
+}
+
+.notification.limpieza {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
 /* Month Controls Mejorados */
-.month-controls {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: white;
-    padding: 12px 20px;
-    border-radius: 16px;
-    border: 2px solid var(--gray-light);
-}
-
-.month-controls h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--dark);
-    min-width: 120px;
-    text-align: center;
-}
-
-/* Estado Vacío */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -1224,6 +1286,20 @@ body {
         padding: 20px;
         gap: 16px;
     }
+    
+    .month-controls {
+        padding: 10px 16px;
+    }
+    
+    .month-nav-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .notification {
+        min-width: 280px;
+        padding: 14px 20px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1312,6 +1388,7 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
+
 /* Sistema de Recordatorios */
 .recordatorios-panel {
     position: fixed;
@@ -1601,9 +1678,4 @@ body {
     color: #ff8f00;
     margin-left: 10px;
     cursor: help;
-}
-
-/* Notificación especial de limpieza */
-.notification.limpieza {
-    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
 }

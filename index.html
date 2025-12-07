@@ -100,12 +100,18 @@
         <div class="view-container" id="calendarView">
             <div class="view-header">
                 <h2><i class="far fa-calendar-alt"></i> Calendario de Ocupación</h2>
-                <div class="month-controls">
-                    <button id="prevMonth" class="btn-icon">
+            </div>
+            
+            <!-- Nuevos controles de mes -->
+            <div class="month-controls">
+                <div class="month-nav">
+                    <button id="prevMonth" class="month-nav-btn" title="Mes anterior">
                         <i class="fas fa-chevron-left"></i>
                     </button>
-                    <h3 id="mesActual">Enero 2024</h3>
-                    <button id="nextMonth" class="btn-icon">
+                </div>
+                <h3 id="mesActual">Enero 2024</h3>
+                <div class="month-nav">
+                    <button id="nextMonth" class="month-nav-btn" title="Mes siguiente">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
@@ -220,7 +226,9 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="cancelarReserva">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" id="cancelarReserva">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Guardar
                     </button>
@@ -250,24 +258,31 @@
                 <button class="btn-close" onclick="sistema.cerrarModalDisponibilidad()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="dispoDepto">Departamento</label>
-                    <select id="dispoDepto">
-                        <option value="0">Todos los departamentos</option>
-                    </select>
+                <div style="display: grid; gap: 20px;">
+                    <div class="form-group">
+                        <label for="dispoDepto"><i class="fas fa-building"></i> Departamento</label>
+                        <select id="dispoDepto" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--gray-light);">
+                            <option value="0">Todos los departamentos</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="dispoMes"><i class="fas fa-calendar"></i> Mes</label>
+                        <select id="dispoMes" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--gray-light);">
+                            <option value="0">Mes actual</option>
+                            <option value="1">Próximo mes</option>
+                            <option value="2">En 2 meses</option>
+                            <option value="3">En 3 meses</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="sistema.cerrarModalDisponibilidad()" style="padding: 12px 24px;">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button class="btn btn-primary" onclick="sistema.mostrarDisponibilidad()" style="padding: 12px 24px;">
+                            <i class="fas fa-calendar-check"></i> Ver Disponibilidad
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="dispoMes">Mes</label>
-                    <select id="dispoMes">
-                        <option value="0">Mes actual</option>
-                        <option value="1">Próximo mes</option>
-                        <option value="2">En 2 meses</option>
-                        <option value="3">En 3 meses</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="sistema.mostrarDisponibilidad()">
-                    <i class="fas fa-calendar-check"></i> Ver Disponibilidad
-                </button>
             </div>
         </div>
     </div>
@@ -276,27 +291,28 @@
     <div class="notification" id="notification">
         <span id="notificationText"></span>
     </div>
-        <!-- Panel de Recordatorios Flotante -->
-        <div class="recordatorios-panel" id="recordatoriosPanel">
-            <div class="recordatorios-header">
-                <h3><i class="fas fa-bell"></i> Recordatorios</h3>
-                <button class="btn-icon" id="cerrarRecordatorios">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="recordatorios-list" id="recordatoriosList">
-                <!-- Recordatorios se generan dinámicamente -->
-            </div>
-            <div class="recordatorios-footer">
-                <small><i class="fas fa-info-circle"></i> Recordatorios automáticos de limpieza</small>
-            </div>
+
+    <!-- Panel de Recordatorios Flotante -->
+    <div class="recordatorios-panel" id="recordatoriosPanel">
+        <div class="recordatorios-header">
+            <h3><i class="fas fa-bell"></i> Recordatorios</h3>
+            <button class="btn-icon" id="cerrarRecordatorios">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    
-        <!-- Badge para recordatorios no leídos -->
-        <div class="badge-recordatorios" id="badgeRecordatorios">
-            <i class="fas fa-bell"></i>
-            <span id="contadorRecordatorios">0</span>
+        <div class="recordatorios-list" id="recordatoriosList">
+            <!-- Recordatorios se generan dinámicamente -->
         </div>
+        <div class="recordatorios-footer">
+            <small><i class="fas fa-info-circle"></i> Recordatorios automáticos de limpieza</small>
+        </div>
+    </div>
+
+    <!-- Badge para recordatorios no leídos -->
+    <div class="badge-recordatorios" id="badgeRecordatorios">
+        <i class="fas fa-bell"></i>
+        <span id="contadorRecordatorios">0</span>
+    </div>
 
     <script src="app.js"></script>
 </body>

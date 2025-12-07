@@ -14,642 +14,615 @@ class RentalSystem {
         this.mesActual = this.fechaActual.getMonth();
         this.anoActual = this.fechaActual.getFullYear();
         this.deptoFiltro = 0; // 0 = todos
+        this.notificationTimeout = null;
         
         this.init();
     }
-        // ========== SISTEMA DE RECORDATORIOS ==========
     
-        generarRecordatorios() {
-            const hoy = new Date();
-            const manana = new Date();
-            manana.setDate(manana.getDate() + 1);
-            
-            const recordatorios = [];
-            
-            // Buscar check-outs de hoy (limpieza urgente)
-            const checkoutsHoy = this.reservas.filter(reserva => {
-                const salida = new Date(reserva.fechaSalida);
-                return salida.toDateString() === hoy.toDateString();
+    // ========== SISTEMA DE RECORDATORIOS ==========
+    
+    generarRecordatorios() {
+        const hoy = new Date();
+        const manana = new Date();
+        manana.setDate(manana.getDate() + 1);
+        
+        const recordatorios = [];
+        
+        // Buscar check-outs de hoy (limpieza urgente)
+        const checkoutsHoy = this.reservas.filter(reserva => {
+            const salida = new Date(reserva.fechaSalida);
+            return salida.toDateString() === hoy.toDateString();
+        });
+        
+        checkoutsHoy.forEach(reserva => {
+            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
+            recordatorios.push({
+                id: `limpieza_${reserva.id}_hoy`,
+                tipo: 'limpieza',
+                prioridad: 'urgente',
+                fecha: hoy,
+                titulo: '⚠️ Limpieza URGENTE',
+                descripcion: `Check-out hoy de ${reserva.cliente.nombre}. El departamento queda vacío y necesita limpieza inmediata.`,
+                propiedad: reserva.propiedad,
+                color: propiedad.color,
+                reservaId: reserva.id,
+                checklist: this.generarChecklistLimpieza()
             });
-            
-            checkoutsHoy.forEach(reserva => {
-                const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-                recordatorios.push({
-                    id: `limpieza_${reserva.id}_hoy`,
-                    tipo: 'limpieza',
-                    prioridad: 'urgente',
-                    fecha: hoy,
-                    titulo: '⚠️ Limpieza URGENTE',
-                    descripcion: `Check-out hoy de ${reserva.cliente.nombre}. El departamento queda vacío y necesita limpieza inmediata.`,
-                    propiedad: reserva.propiedad,
-                    color: propiedad.color,
-                    reservaId: reserva.id,
-                    checklist: this.generarChecklistLimpieza()
-                });
+        });
+        
+        // Buscar check-outs de mañana (limpieza programada)
+        const checkoutsManana = this.reservas.filter(reserva => {
+            const salida = new Date(reserva.fechaSalida);
+            return salida.toDateString() === manana.toDateString();
+        });
+        
+        checkoutsManana.forEach(reserva => {
+            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
+            recordatorios.push({
+                id: `limpieza_${reserva.id}_manana`,
+                tipo: 'limpieza',
+                prioridad: 'manana',
+                fecha: manana,
+                titulo: '📅 Limpieza Programada',
+                descripcion: `Mañana check-out de ${reserva.cliente.nombre}. Programar limpieza para el día siguiente.`,
+                propiedad: reserva.propiedad,
+                color: propiedad.color,
+                reservaId: reserva.id,
+                checklist: this.generarChecklistLimpieza()
             });
+        });
+        
+        // Buscar check-ins próximos (preparación)
+        const en3Dias = new Date();
+        en3Dias.setDate(en3Dias.getDate() + 3);
+        
+        const checkinsProximos = this.reservas.filter(reserva => {
+            const entrada = new Date(reserva.fechaEntrada);
+            return entrada > hoy && entrada <= en3Dias;
+        });
+        
+        checkinsProximos.forEach(reserva => {
+            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
+            const diasFaltan = Math.ceil((new Date(reserva.fechaEntrada) - hoy) / (1000 * 60 * 60 * 24));
             
-            // Buscar check-outs de mañana (limpieza programada)
-            const checkoutsManana = this.reservas.filter(reserva => {
-                const salida = new Date(reserva.fechaSalida);
-                return salida.toDateString() === manana.toDateString();
+            recordatorios.push({
+                id: `preparacion_${reserva.id}`,
+                tipo: 'preparacion',
+                prioridad: diasFaltan === 1 ? 'urgente' : diasFaltan === 2 ? 'manana' : 'normal',
+                fecha: new Date(reserva.fechaEntrada),
+                titulo: `🏠 Preparar Depto en ${diasFaltan} día${diasFaltan > 1 ? 's' : ''}`,
+                descripcion: `Check-in el ${this.formatearFecha(reserva.fechaEntrada)} de ${reserva.cliente.nombre}. Verificar que todo esté listo.`,
+                propiedad: reserva.propiedad,
+                color: propiedad.color,
+                reservaId: reserva.id,
+                checklist: this.generarChecklistPreparacion()
             });
-            
-            checkoutsManana.forEach(reserva => {
-                const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-                recordatorios.push({
-                    id: `limpieza_${reserva.id}_manana`,
-                    tipo: 'limpieza',
-                    prioridad: 'manana',
-                    fecha: manana,
-                    titulo: '📅 Limpieza Programada',
-                    descripcion: `Mañana check-out de ${reserva.cliente.nombre}. Programar limpieza para el día siguiente.`,
-                    propiedad: reserva.propiedad,
-                    color: propiedad.color,
-                    reservaId: reserva.id,
-                    checklist: this.generarChecklistLimpieza()
-                });
-            });
-            
-            // Buscar check-ins próximos (preparación)
-            const en3Dias = new Date();
-            en3Dias.setDate(en3Dias.getDate() + 3);
-            
-            const checkinsProximos = this.reservas.filter(reserva => {
-                const entrada = new Date(reserva.fechaEntrada);
-                return entrada > hoy && entrada <= en3Dias;
-            });
-            
-            checkinsProximos.forEach(reserva => {
-                const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-                const diasFaltan = Math.ceil((new Date(reserva.fechaEntrada) - hoy) / (1000 * 60 * 60 * 24));
-                
-                recordatorios.push({
-                    id: `preparacion_${reserva.id}`,
-                    tipo: 'preparacion',
-                    prioridad: diasFaltan === 1 ? 'urgente' : diasFaltan === 2 ? 'manana' : 'normal',
-                    fecha: new Date(reserva.fechaEntrada),
-                    titulo: `🏠 Preparar Depto en ${diasFaltan} día${diasFaltan > 1 ? 's' : ''}`,
-                    descripcion: `Check-in el ${this.formatearFecha(reserva.fechaEntrada)} de ${reserva.cliente.nombre}. Verificar que todo esté listo.`,
-                    propiedad: reserva.propiedad,
-                    color: propiedad.color,
-                    reservaId: reserva.id,
-                    checklist: this.generarChecklistPreparacion()
-                });
-            });
-            
-            return recordatorios.sort((a, b) => {
-                // Ordenar por prioridad: urgente > manana > normal
-                const prioridadOrden = { 'urgente': 1, 'manana': 2, 'normal': 3 };
-                return prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad] || a.fecha - b.fecha;
-            });
+        });
+        
+        return recordatorios.sort((a, b) => {
+            // Ordenar por prioridad: urgente > manana > normal
+            const prioridadOrden = { 'urgente': 1, 'manana': 2, 'normal': 3 };
+            return prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad] || a.fecha - b.fecha;
+        });
+    }
+    
+    generarChecklistLimpieza() {
+        return [
+            'Cambiar sábanas y fundas',
+            'Limpiar baños a fondo',
+            'Aspirar alfombras y pisos',
+            'Limpiar cocina y electrodomésticos',
+            'Reponer insumos (papel, jabón, etc.)',
+            'Vaciar y limpiar basureros',
+            'Verificar funcionamiento de todos los equipos',
+            'Dejar llaves en lugar seguro'
+        ];
+    }
+    
+    generarChecklistPreparacion() {
+        return [
+            'Verificar limpieza general',
+            'Confirmar que haya toallas limpias',
+            'Revisar inventario de vajilla',
+            'Probar aire acondicionado/calefacción',
+            'Verificar funcionamiento de WiFi',
+            'Dejar instrucciones claras',
+            'Confirmar horario de check-in',
+            'Preparar llaves/tarjetas de acceso'
+        ];
+    }
+    
+    mostrarRecordatorios() {
+        const recordatorios = this.generarRecordatorios();
+        const panel = document.getElementById('recordatoriosList');
+        const badge = document.getElementById('contadorRecordatorios');
+        
+        // Actualizar contador
+        const noLeidos = recordatorios.length;
+        badge.textContent = noLeidos;
+        
+        if (noLeidos === 0) {
+            panel.innerHTML = `
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <i class="far fa-check-circle" style="font-size: 48px; margin-bottom: 16px; color: #4caf50;"></i>
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">¡Todo al día!</h3>
+                    <p style="font-size: 13px; color: var(--gray);">No hay recordatorios pendientes.</p>
+                </div>
+            `;
+            return;
         }
         
-        generarChecklistLimpieza() {
-            return [
-                'Cambiar sábanas y fundas',
-                'Limpiar baños a fondo',
-                'Aspirar alfombras y pisos',
-                'Limpiar cocina y electrodomésticos',
-                'Reponer insumos (papel, jabón, etc.)',
-                'Vaciar y limpiar basureros',
-                'Verificar funcionamiento de todos los equipos',
-                'Dejar llaves en lugar seguro'
-            ];
-        }
+        let html = '';
         
-        generarChecklistPreparacion() {
-            return [
-                'Verificar limpieza general',
-                'Confirmar que haya toallas limpias',
-                'Revisar inventario de vajilla',
-                'Probar aire acondicionado/calefacción',
-                'Verificar funcionamiento de WiFi',
-                'Dejar instrucciones claras',
-                'Confirmar horario de check-in',
-                'Preparar llaves/tarjetas de acceso'
-            ];
-        }
-        
-        mostrarRecordatorios() {
-            const recordatorios = this.generarRecordatorios();
-            const panel = document.getElementById('recordatoriosList');
-            const badge = document.getElementById('contadorRecordatorios');
-            
-            // Actualizar contador
-            const noLeidos = recordatorios.length;
-            badge.textContent = noLeidos;
-            
-            if (noLeidos === 0) {
-                panel.innerHTML = `
-                    <div class="empty-state" style="padding: 40px 20px;">
-                        <i class="far fa-check-circle" style="font-size: 48px; margin-bottom: 16px; color: #4caf50;"></i>
-                        <h3 style="font-size: 16px; margin-bottom: 8px;">¡Todo al día!</h3>
-                        <p style="font-size: 13px; color: var(--gray);">No hay recordatorios pendientes.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            
-            recordatorios.forEach(recordatorio => {
-                const propiedad = this.propiedades.find(p => p.id == recordatorio.propiedad);
-                const fechaStr = recordatorio.fecha.toLocaleDateString('es-ES', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short'
-                });
-                
-                html += `
-                    <div class="recordatorio-item ${recordatorio.prioridad}">
-                        <div class="recordatorio-header">
-                            <div class="recordatorio-titulo">
-                                ${recordatorio.titulo}
-                            </div>
-                            <div class="recordatorio-fecha">
-                                ${fechaStr}
-                            </div>
-                        </div>
-                        
-                        <div class="recordatorio-descripcion">
-                            ${recordatorio.descripcion}
-                        </div>
-                        
-                        <div class="recordatorio-depto">
-                            <div class="recordatorio-color" style="background: ${recordatorio.color};"></div>
-                            ${propiedad.nombre}
-                        </div>
-                        
-                        <div class="recordatorio-acciones">
-                            <button class="btn-recordatorio btn-marcar-como" onclick="sistema.marcarRecordatorioCompletado('${recordatorio.id}')">
-                                <i class="fas fa-check"></i> Completado
-                            </button>
-                            <button class="btn-recordatorio btn-ir-a" onclick="sistema.verDetalleRecordatorio('${recordatorio.id}')">
-                                <i class="fas fa-clipboard-check"></i> Checklist
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            panel.innerHTML = html;
-            
-            // Mostrar notificación si hay recordatorios urgentes
-            const urgentes = recordatorios.filter(r => r.prioridad === 'urgente').length;
-            if (urgentes > 0 && !localStorage.getItem('notificacion_mostrada_hoy')) {
-                this.mostrarNotificacionLimpieza(urgentes);
-            }
-        }
-        
-        marcarRecordatorioCompletado(idRecordatorio) {
-            // Guardar en localStorage que este recordatorio fue completado
-            const completados = JSON.parse(localStorage.getItem('recordatorios_completados')) || [];
-            completados.push({
-                id: idRecordatorio,
-                fecha: new Date().toISOString()
-            });
-            localStorage.setItem('recordatorios_completados', JSON.stringify(completados));
-            
-            // Actualizar lista
-            this.mostrarRecordatorios();
-            
-            // Actualizar contador
-            const recordatorios = this.generarRecordatorios();
-            const sinCompletar = recordatorios.filter(r => 
-                !completados.some(c => c.id === r.id)
-            ).length;
-            
-            document.getElementById('contadorRecordatorios').textContent = sinCompletar;
-            
-            this.mostrarNotificacion('Recordatorio marcado como completado', 'success');
-        }
-        
-        verDetalleRecordatorio(idRecordatorio) {
-            const recordatorios = this.generarRecordatorios();
-            const recordatorio = recordatorios.find(r => r.id === idRecordatorio);
-            
-            if (!recordatorio) return;
-            
+        recordatorios.forEach(recordatorio => {
             const propiedad = this.propiedades.find(p => p.id == recordatorio.propiedad);
-            const reserva = this.reservas.find(r => r.id == recordatorio.reservaId);
+            const fechaStr = recordatorio.fecha.toLocaleDateString('es-ES', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short'
+            });
             
-            let modalContent = `
-                <div class="recordatorio-detalle">
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="font-size: 18px; margin-bottom: 8px; color: var(--dark);">
+            html += `
+                <div class="recordatorio-item ${recordatorio.prioridad}">
+                    <div class="recordatorio-header">
+                        <div class="recordatorio-titulo">
                             ${recordatorio.titulo}
-                        </h3>
-                        <p style="color: var(--gray); font-size: 14px;">
-                            ${recordatorio.descripcion}
-                        </p>
-                        <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
-                            <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.05); border-radius: 12px;">
-                                <div style="width: 12px; height: 12px; border-radius: 50%; background: ${recordatorio.color};"></div>
-                                <span style="font-size: 13px; font-weight: 500;">${propiedad.nombre}</span>
-                            </div>
-                            <div style="font-size: 13px; color: var(--gray);">
-                                <i class="fas fa-user"></i> ${reserva.cliente.nombre}
-                            </div>
-                            <div style="font-size: 13px; color: var(--gray);">
-                                <i class="fas fa-phone"></i> ${reserva.cliente.telefono}
-                            </div>
+                        </div>
+                        <div class="recordatorio-fecha">
+                            ${fechaStr}
                         </div>
                     </div>
                     
-                    <div class="recordatorio-checklist">
-                        <h4 style="font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-tasks"></i> Checklist de ${recordatorio.tipo === 'limpieza' ? 'Limpieza' : 'Preparación'}
-                        </h4>
-            `;
-            
-            recordatorio.checklist.forEach((item, index) => {
-                const itemId = `check_${idRecordatorio}_${index}`;
-                modalContent += `
-                    <div class="checklist-item-recordatorio">
-                        <input type="checkbox" id="${itemId}" onchange="sistema.marcarChecklistItem('${idRecordatorio}', ${index})">
-                        <label for="${itemId}">${item}</label>
+                    <div class="recordatorio-descripcion">
+                        ${recordatorio.descripcion}
                     </div>
-                `;
-            });
-            
+                    
+                    <div class="recordatorio-depto">
+                        <div class="recordatorio-color" style="background: ${recordatorio.color};"></div>
+                        ${propiedad.nombre}
+                    </div>
+                    
+                    <div class="recordatorio-acciones">
+                        <button class="btn-recordatorio btn-marcar-como" onclick="sistema.marcarRecordatorioCompletado('${recordatorio.id}')">
+                            <i class="fas fa-check"></i> Completado
+                        </button>
+                        <button class="btn-recordatorio btn-ir-a" onclick="sistema.verDetalleRecordatorio('${recordatorio.id}')">
+                            <i class="fas fa-clipboard-check"></i> Checklist
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        panel.innerHTML = html;
+        
+        // Mostrar notificación si hay recordatorios urgentes
+        const urgentes = recordatorios.filter(r => r.prioridad === 'urgente').length;
+        if (urgentes > 0 && !localStorage.getItem('notificacion_mostrada_hoy')) {
+            this.mostrarNotificacionLimpieza(urgentes);
+        }
+    }
+    
+    marcarRecordatorioCompletado(idRecordatorio) {
+        // Guardar en localStorage que este recordatorio fue completado
+        const completados = JSON.parse(localStorage.getItem('recordatorios_completados')) || [];
+        completados.push({
+            id: idRecordatorio,
+            fecha: new Date().toISOString()
+        });
+        localStorage.setItem('recordatorios_completados', JSON.stringify(completados));
+        
+        // Actualizar lista
+        this.mostrarRecordatorios();
+        
+        // Actualizar contador
+        const recordatorios = this.generarRecordatorios();
+        const sinCompletar = recordatorios.filter(r => 
+            !completados.some(c => c.id === r.id)
+        ).length;
+        
+        document.getElementById('contadorRecordatorios').textContent = sinCompletar;
+        
+        this.mostrarNotificacion('Recordatorio marcado como completado', 'success');
+    }
+    
+    verDetalleRecordatorio(idRecordatorio) {
+        const recordatorios = this.generarRecordatorios();
+        const recordatorio = recordatorios.find(r => r.id === idRecordatorio);
+        
+        if (!recordatorio) return;
+        
+        const propiedad = this.propiedades.find(p => p.id == recordatorio.propiedad);
+        const reserva = this.reservas.find(r => r.id == recordatorio.reservaId);
+        
+        let modalContent = `
+            <div class="recordatorio-detalle">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 18px; margin-bottom: 8px; color: var(--dark);">
+                        ${recordatorio.titulo}
+                    </h3>
+                    <p style="color: var(--gray); font-size: 14px;">
+                        ${recordatorio.descripcion}
+                    </p>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 12px;">
+                        <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(0,0,0,0.05); border-radius: 12px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${recordatorio.color};"></div>
+                            <span style="font-size: 13px; font-weight: 500;">${propiedad.nombre}</span>
+                        </div>
+                        <div style="font-size: 13px; color: var(--gray);">
+                            <i class="fas fa-user"></i> ${reserva.cliente.nombre}
+                        </div>
+                        <div style="font-size: 13px; color: var(--gray);">
+                            <i class="fas fa-phone"></i> ${reserva.cliente.telefono}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="recordatorio-checklist">
+                    <h4 style="font-size: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-tasks"></i> Checklist de ${recordatorio.tipo === 'limpieza' ? 'Limpieza' : 'Preparación'}
+                    </h4>
+        `;
+        
+        recordatorio.checklist.forEach((item, index) => {
+            const itemId = `check_${idRecordatorio}_${index}`;
             modalContent += `
+                <div class="checklist-item-recordatorio">
+                    <input type="checkbox" id="${itemId}" onchange="sistema.marcarChecklistItem('${idRecordatorio}', ${index})">
+                    <label for="${itemId}">${item}</label>
+                </div>
+            `;
+        });
+        
+        modalContent += `
+                </div>
+                
+                <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
+                        Cerrar
+                    </button>
+                    <button class="btn btn-primary" onclick="sistema.completarChecklist('${idRecordatorio}')">
+                        <i class="fas fa-check-double"></i> Marcar Todo Completado
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Crear modal temporal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2><i class="fas fa-clipboard-list"></i> Checklist Detallado</h2>
+                    <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+                ${modalContent}
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Cargar estado del checklist si existe
+        this.cargarEstadoChecklist(idRecordatorio);
+    }
+    
+    marcarChecklistItem(idRecordatorio, index) {
+        const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
+        
+        if (!checklistEstado[idRecordatorio]) {
+            checklistEstado[idRecordatorio] = [];
+        }
+        
+        const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
+        const item = document.querySelector(`#check_${idRecordatorio}_${index}`).closest('.checklist-item-recordatorio');
+        
+        if (checkbox.checked) {
+            checklistEstado[idRecordatorio][index] = true;
+            item.classList.add('completado');
+        } else {
+            checklistEstado[idRecordatorio][index] = false;
+            item.classList.remove('completado');
+        }
+        
+        localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
+    }
+    
+    cargarEstadoChecklist(idRecordatorio) {
+        const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
+        
+        if (checklistEstado[idRecordatorio]) {
+            checklistEstado[idRecordatorio].forEach((completado, index) => {
+                if (completado) {
+                    const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
+                    const item = checkbox.closest('.checklist-item-recordatorio');
+                    
+                    if (checkbox && item) {
+                        checkbox.checked = true;
+                        item.classList.add('completado');
+                    }
+                }
+            });
+        }
+    }
+    
+    completarChecklist(idRecordatorio) {
+        const recordatorios = this.generarRecordatorios();
+        const recordatorio = recordatorios.find(r => r.id === idRecordatorio);
+        
+        if (!recordatorio) return;
+        
+        const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
+        checklistEstado[idRecordatorio] = recordatorio.checklist.map(() => true);
+        localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
+        
+        // Marcar todos los checkboxes
+        recordatorio.checklist.forEach((item, index) => {
+            const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
+            const itemElement = checkbox.closest('.checklist-item-recordatorio');
+            
+            if (checkbox && itemElement) {
+                checkbox.checked = true;
+                itemElement.classList.add('completado');
+            }
+        });
+        
+        this.mostrarNotificacion('Checklist completado', 'success');
+    }
+    
+    mostrarNotificacionLimpieza(cantidad) {
+        const hoy = new Date().toDateString();
+        localStorage.setItem('notificacion_mostrada_hoy', hoy);
+        
+        let mensaje = '';
+        if (cantidad === 1) {
+            mensaje = '⚠️ Tienes 1 limpieza urgente para hoy';
+        } else {
+            mensaje = `⚠️ Tienes ${cantidad} limpiezas urgentes para hoy`;
+        }
+        
+        this.mostrarNotificacion(mensaje, 'limpieza');
+    }
+    
+    // ========== INDICADORES EN LAS VISTAS ==========
+    
+    generarListaReservasConIndicadores(filtro = '') {
+        const hoy = new Date();
+        const manana = new Date();
+        manana.setDate(manana.getDate() + 1);
+        
+        let reservasFiltradas = this.reservas
+            .filter(r => new Date(r.fechaEntrada) >= hoy)
+            .sort((a, b) => new Date(a.fechaEntrada) - new Date(b.fechaEntrada));
+        
+        if (filtro) {
+            const termino = filtro.toLowerCase();
+            reservasFiltradas = reservasFiltradas.filter(r => 
+                r.cliente.nombre.toLowerCase().includes(termino) ||
+                r.cliente.dni.includes(termino) ||
+                r.cliente.telefono.includes(termino)
+            );
+        }
+        
+        const lista = document.getElementById('listaReservas');
+        
+        if (reservasFiltradas.length === 0) {
+            lista.innerHTML = `
+                <div class="empty-state">
+                    <i class="far fa-calendar-check"></i>
+                    <h3>No hay reservas próximas</h3>
+                    <p>No hay reservas programadas para los próximos días.</p>
+                    <button class="btn btn-primary" onclick="sistema.mostrarModalReserva()" style="margin-top: 20px;">
+                        <i class="fas fa-plus"></i> Crear primera reserva
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        lista.innerHTML = '';
+        
+        reservasFiltradas.forEach(reserva => {
+            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
+            const entrada = new Date(reserva.fechaEntrada);
+            const salida = new Date(reserva.fechaSalida);
+            
+            // Determinar si necesita indicador de limpieza
+            let indicadorLimpieza = '';
+            if (salida.toDateString() === hoy.toDateString()) {
+                indicadorLimpieza = '<span class="indicador-limpieza" title="Limpieza urgente para hoy"><i class="fas fa-broom"></i> Limpiar hoy</span>';
+            } else if (salida.toDateString() === manana.toDateString()) {
+                indicadorLimpieza = '<span class="indicador-limpieza" title="Limpieza programada para mañana"><i class="fas fa-broom"></i> Limpiar mañana</span>';
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'reserva-item';
+            item.innerHTML = `
+                <div class="reserva-header">
+                    <div class="reserva-cliente">
+                        <i class="fas fa-user"></i>
+                        ${reserva.cliente.nombre}
+                        ${indicadorLimpieza}
+                    </div>
+                    <div class="reserva-depto" style="background: ${propiedad.color}">
+                        ${propiedad.nombre}
+                    </div>
+                </div>
+                
+                <div class="reserva-fechas">
+                    <span><i class="fas fa-sign-in-alt"></i> ${this.formatearFecha(reserva.fechaEntrada)}</span>
+                    <i class="fas fa-arrow-right"></i>
+                    <span><i class="fas fa-sign-out-alt"></i> ${this.formatearFecha(reserva.fechaSalida)}</span>
+                </div>
+                
+                <div class="reserva-contacto">
+                    <span><i class="fas fa-id-card"></i> ${reserva.cliente.dni}</span>
+                    <span><i class="fas fa-phone"></i> ${reserva.cliente.telefono}</span>
+                    ${reserva.cliente.email ? `<span><i class="fas fa-envelope"></i> ${reserva.cliente.email}</span>` : ''}
+                </div>
+                
+                ${reserva.notas ? `
+                    <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #666;">
+                        <strong><i class="fas fa-sticky-note"></i> Notas:</strong> ${reserva.notas}
+                    </div>
+                ` : ''}
+                
+                <div class="reserva-acciones">
+                    <button class="btn-small btn-info" onclick="sistema.editarReserva(${reserva.id})">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button class="btn-small btn-danger" onclick="sistema.eliminarReserva(${reserva.id})">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                    ${salida.toDateString() === hoy.toDateString() || 
+                      salida.toDateString() === manana.toDateString() ? 
+                      `<button class="btn-small" style="background: #ff9800; color: white;" onclick="sistema.mostrarChecklistLimpieza(${reserva.id})">
+                        <i class="fas fa-broom"></i> Checklist
+                       </button>` : ''}
+                </div>
+            `;
+            lista.appendChild(item);
+        });
+    }
+    
+    mostrarChecklistLimpieza(reservaId) {
+        const reserva = this.reservas.find(r => r.id == reservaId);
+        if (!reserva) return;
+        
+        const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
+        const hoy = new Date();
+        const salida = new Date(reserva.fechaSalida);
+        const esHoy = salida.toDateString() === hoy.toDateString();
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-broom"></i> Checklist de Limpieza</h2>
+                    <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px; padding: 16px; background: ${esHoy ? '#fff8e1' : '#e3f2fd'}; border-radius: 12px; border-left: 4px solid ${esHoy ? '#ff9800' : '#2196f3'};">
+                        <h3 style="font-size: 16px; margin-bottom: 8px; color: ${esHoy ? '#d84315' : '#1565c0'}">
+                            ${esHoy ? '⚠️ LIMPIEZA URGENTE' : '📅 LIMPIEZA PROGRAMADA'}
+                        </h3>
+                        <p style="font-size: 14px; color: #666; margin-bottom: 8px;">
+                            Departamento: <strong>${propiedad.nombre}</strong>
+                        </p>
+                        <p style="font-size: 14px; color: #666; margin-bottom: 8px;">
+                            Huésped saliente: <strong>${reserva.cliente.nombre}</strong>
+                        </p>
+                        <p style="font-size: 14px; color: #666;">
+                            Fecha check-out: <strong>${this.formatearFecha(reserva.fechaSalida)}</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <h3><i class="fas fa-broom"></i> Limpieza General</h3>
+                        ${this.generarChecklistItems([
+                            'Cambiar sábanas y fundas de almohadas',
+                            'Limpiar y desinfectar baños',
+                            'Aspirar alfombras y lavar pisos',
+                            'Limpiar ventanas y espejos',
+                            'Polvo en muebles y superficies'
+                        ])}
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <h3><i class="fas fa-kitchen-set"></i> Cocina</h3>
+                        ${this.generarChecklistItems([
+                            'Limpiar horno y microondas',
+                            'Lavar vajilla y utensilios',
+                            'Limpiar refrigerador',
+                            'Verificar funcionamiento de electrodomésticos',
+                            'Reponer elementos básicos'
+                        ])}
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <h3><i class="fas fa-shower"></i> Baños</h3>
+                        ${this.generarChecklistItems([
+                            'Reponer papel higiénico',
+                            'Reponer jabón y shampoo',
+                            'Limpiar ducha/bañera',
+                            'Desinfectar inodoro',
+                            'Reponer toallas limpias'
+                        ])}
+                    </div>
+                    
+                    <div class="checklist-category">
+                        <h3><i class="fas fa-check-circle"></i> Verificación Final</h3>
+                        ${this.generarChecklistItems([
+                            'Verificar que todas las luces funcionen',
+                            'Probar aire acondicionado/calefacción',
+                            'Confirmar que WiFi funciona',
+                            'Revisar cerraduras y seguridad',
+                            'Dejar llaves en lugar designado'
+                        ])}
+                    </div>
+                    
+                    <div style="margin-top: 24px; padding: 16px; background: #e8f5e9; border-radius: 12px; border-left: 4px solid #4caf50;">
+                        <h4 style="font-size: 14px; margin-bottom: 8px; color: #2e7d32;">
+                            <i class="fas fa-clipboard-check"></i> Estado del Departamento
+                        </h4>
+                        <div style="display: flex; gap: 16px; margin-top: 12px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                                <input type="radio" name="estado_${reservaId}" value="excelente" checked>
+                                <span>Excelente - Listo para nuevo huésped</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                                <input type="radio" name="estado_${reservaId}" value="regular">
+                                <span>Regular - Necesita atención menor</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                                <input type="radio" name="estado_${reservaId}" value="problemas">
+                                <span>Con problemas - Reportar mantenimiento</span>
+                            </label>
+                        </div>
                     </div>
                     
                     <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
                         <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
-                            Cerrar
+                            Cancelar
                         </button>
-                        <button class="btn btn-primary" onclick="sistema.completarChecklist('${idRecordatorio}')">
-                            <i class="fas fa-check-double"></i> Marcar Todo Completado
+                        <button class="btn btn-primary" onclick="sistema.marcarLimpiezaCompletada(${reservaId})">
+                            <i class="fas fa-check-double"></i> Marcar Limpieza Completada
                         </button>
                     </div>
                 </div>
-            `;
-            
-            // Crear modal temporal
-            const modal = document.createElement('div');
-            modal.className = 'modal active';
-            modal.innerHTML = `
-                <div class="modal-content" style="max-width: 500px;">
-                    <div class="modal-header">
-                        <h2><i class="fas fa-clipboard-list"></i> Checklist Detallado</h2>
-                        <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
-                    </div>
-                    ${modalContent}
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Cargar estado del checklist si existe
-            this.cargarEstadoChecklist(idRecordatorio);
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    marcarLimpiezaCompletada(reservaId) {
+        const estadoSeleccionado = document.querySelector(`input[name="estado_${reservaId}"]:checked`);
+        
+        if (!estadoSeleccionado) {
+            this.mostrarNotificacion('Por favor selecciona el estado del departamento', 'error');
+            return;
         }
         
-        marcarChecklistItem(idRecordatorio, index) {
-            const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
-            
-            if (!checklistEstado[idRecordatorio]) {
-                checklistEstado[idRecordatorio] = [];
-            }
-            
-            const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-            const item = document.querySelector(`#check_${idRecordatorio}_${index}`).closest('.checklist-item-recordatorio');
-            
-            if (checkbox.checked) {
-                checklistEstado[idRecordatorio][index] = true;
-                item.classList.add('completado');
-            } else {
-                checklistEstado[idRecordatorio][index] = false;
-                item.classList.remove('completado');
-            }
-            
-            localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
-        }
+        const limpiezasCompletadas = JSON.parse(localStorage.getItem('limpiezas_completadas')) || [];
+        limpiezasCompletadas.push({
+            reservaId: reservaId,
+            fecha: new Date().toISOString(),
+            estado: estadoSeleccionado.value
+        });
         
-        cargarEstadoChecklist(idRecordatorio) {
-            const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
-            
-            if (checklistEstado[idRecordatorio]) {
-                checklistEstado[idRecordatorio].forEach((completado, index) => {
-                    if (completado) {
-                        const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-                        const item = checkbox.closest('.checklist-item-recordatorio');
-                        
-                        if (checkbox && item) {
-                            checkbox.checked = true;
-                            item.classList.add('completado');
-                        }
-                    }
-                });
-            }
-        }
+        localStorage.setItem('limpiezas_completadas', JSON.stringify(limpiezasCompletadas));
         
-        completarChecklist(idRecordatorio) {
-            const recordatorios = this.generarRecordatorios();
-            const recordatorio = recordatorios.find(r => r.id === idRecordatorio);
-            
-            if (!recordatorio) return;
-            
-            const checklistEstado = JSON.parse(localStorage.getItem('checklist_estado')) || {};
-            checklistEstado[idRecordatorio] = recordatorio.checklist.map(() => true);
-            localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
-            
-            // Marcar todos los checkboxes
-            recordatorio.checklist.forEach((item, index) => {
-                const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-                const itemElement = checkbox.closest('.checklist-item-recordatorio');
-                
-                if (checkbox && itemElement) {
-                    checkbox.checked = true;
-                    itemElement.classList.add('completado');
-                }
-            });
-            
-            this.mostrarNotificacion('Checklist completado', 'success');
-        }
+        // Cerrar modal
+        document.querySelector('.modal.active').remove();
         
-        mostrarNotificacionLimpieza(cantidad) {
-            const hoy = new Date().toDateString();
-            localStorage.setItem('notificacion_mostrada_hoy', hoy);
-            
-            let mensaje = '';
-            if (cantidad === 1) {
-                mensaje = '⚠️ Tienes 1 limpieza urgente para hoy';
-            } else {
-                mensaje = `⚠️ Tienes ${cantidad} limpiezas urgentes para hoy`;
-            }
-            
-            this.mostrarNotificacion(mensaje, 'limpieza');
-        }
+        this.mostrarNotificacion('Limpieza marcada como completada', 'success');
         
-        // Modificar la función de notificaciones para aceptar tipo 'limpieza'
-        mostrarNotificacion(mensaje, tipo = 'info') {
-            const notification = document.getElementById('notification');
-            const text = document.getElementById('notificationText');
-            
-            // Agregar icono según el tipo
-            let icon = 'fas fa-info-circle';
-            if (tipo === 'success') icon = 'fas fa-check-circle';
-            if (tipo === 'error') icon = 'fas fa-exclamation-circle';
-            if (tipo === 'warning') icon = 'fas fa-exclamation-triangle';
-            if (tipo === 'limpieza') icon = 'fas fa-broom';
-            
-            text.innerHTML = `<i class="${icon}"></i> ${mensaje}`;
-            notification.className = `notification ${tipo} show`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000);
-        }
-        
-        // ========== INDICADORES EN LAS VISTAS ==========
-        
-        agregarIndicadoresLimpieza() {
-            // Agregar indicadores en la lista de reservas
-            const hoy = new Date();
-            const manana = new Date();
-            manana.setDate(manana.getDate() + 1);
-            
-            this.reservas.forEach(reserva => {
-                const salida = new Date(reserva.fechaSalida);
-                
-                // Si el check-out es hoy o mañana, agregar indicador
-                if (salida.toDateString() === hoy.toDateString() || 
-                    salida.toDateString() === manana.toDateString()) {
-                    
-                    // Esto se ejecutará cuando se generen las vistas
-                    // Se agrega dinámicamente en generarListaReservas()
-                }
-            });
-        }
-        
-        // Modificar generarListaReservas para incluir indicadores
-        generarListaReservasConIndicadores(filtro = '') {
-            const hoy = new Date();
-            const manana = new Date();
-            manana.setDate(manana.getDate() + 1);
-            
-            let reservasFiltradas = this.reservas
-                .filter(r => new Date(r.fechaEntrada) >= hoy)
-                .sort((a, b) => new Date(a.fechaEntrada) - new Date(b.fechaEntrada));
-            
-            if (filtro) {
-                const termino = filtro.toLowerCase();
-                reservasFiltradas = reservasFiltradas.filter(r => 
-                    r.cliente.nombre.toLowerCase().includes(termino) ||
-                    r.cliente.dni.includes(termino) ||
-                    r.cliente.telefono.includes(termino)
-                );
-            }
-            
-            if (reservasFiltradas.length === 0) {
-                // ... (código existente)
-                return;
-            }
-            
-            const lista = document.getElementById('listaReservas');
-            lista.innerHTML = '';
-            
-            reservasFiltradas.forEach(reserva => {
-                const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-                const entrada = new Date(reserva.fechaEntrada);
-                const salida = new Date(reserva.fechaSalida);
-                
-                // Determinar si necesita indicador de limpieza
-                let indicadorLimpieza = '';
-                if (salida.toDateString() === hoy.toDateString()) {
-                    indicadorLimpieza = '<span class="indicador-limpieza" title="Limpieza urgente para hoy"><i class="fas fa-broom"></i> Limpiar hoy</span>';
-                } else if (salida.toDateString() === manana.toDateString()) {
-                    indicadorLimpieza = '<span class="indicador-limpieza" title="Limpieza programada para mañana"><i class="fas fa-broom"></i> Limpiar mañana</span>';
-                }
-                
-                const item = document.createElement('div');
-                item.className = 'reserva-item';
-                item.innerHTML = `
-                    <div class="reserva-header">
-                        <div class="reserva-cliente">
-                            <i class="fas fa-user"></i>
-                            ${reserva.cliente.nombre}
-                            ${indicadorLimpieza}
-                        </div>
-                        <div class="reserva-depto" style="background: ${propiedad.color}">
-                            ${propiedad.nombre}
-                        </div>
-                    </div>
-                    
-                    <div class="reserva-fechas">
-                        <span><i class="fas fa-sign-in-alt"></i> ${this.formatearFecha(reserva.fechaEntrada)}</span>
-                        <i class="fas fa-arrow-right"></i>
-                        <span><i class="fas fa-sign-out-alt"></i> ${this.formatearFecha(reserva.fechaSalida)}</span>
-                    </div>
-                    
-                    <div class="reserva-contacto">
-                        <span><i class="fas fa-id-card"></i> ${reserva.cliente.dni}</span>
-                        <span><i class="fas fa-phone"></i> ${reserva.cliente.telefono}</span>
-                        ${reserva.cliente.email ? `<span><i class="fas fa-envelope"></i> ${reserva.cliente.email}</span>` : ''}
-                    </div>
-                    
-                    ${reserva.notas ? `
-                        <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #666;">
-                            <strong><i class="fas fa-sticky-note"></i> Notas:</strong> ${reserva.notas}
-                        </div>
-                    ` : ''}
-                    
-                    <div class="reserva-acciones">
-                        <button class="btn-small btn-info" onclick="sistema.editarReserva(${reserva.id})">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="btn-small btn-danger" onclick="sistema.eliminarReserva(${reserva.id})">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                        ${salida.toDateString() === hoy.toDateString() || 
-                          salida.toDateString() === manana.toDateString() ? 
-                          `<button class="btn-small" style="background: #ff9800; color: white;" onclick="sistema.mostrarChecklistLimpieza(${reserva.id})">
-                            <i class="fas fa-broom"></i> Checklist
-                           </button>` : ''}
-                    </div>
-                `;
-                lista.appendChild(item);
-            });
-        }
-        
-        mostrarChecklistLimpieza(reservaId) {
-            const reserva = this.reservas.find(r => r.id == reservaId);
-            if (!reserva) return;
-            
-            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-            const hoy = new Date();
-            const salida = new Date(reserva.fechaSalida);
-            const esHoy = salida.toDateString() === hoy.toDateString();
-            
-            const modal = document.createElement('div');
-            modal.className = 'modal active';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2><i class="fas fa-broom"></i> Checklist de Limpieza</h2>
-                        <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div style="margin-bottom: 20px; padding: 16px; background: ${esHoy ? '#fff8e1' : '#e3f2fd'}; border-radius: 12px; border-left: 4px solid ${esHoy ? '#ff9800' : '#2196f3'};">
-                            <h3 style="font-size: 16px; margin-bottom: 8px; color: ${esHoy ? '#d84315' : '#1565c0'}">
-                                ${esHoy ? '⚠️ LIMPIEZA URGENTE' : '📅 LIMPIEZA PROGRAMADA'}
-                            </h3>
-                            <p style="font-size: 14px; color: #666; margin-bottom: 8px;">
-                                Departamento: <strong>${propiedad.nombre}</strong>
-                            </p>
-                            <p style="font-size: 14px; color: #666; margin-bottom: 8px;">
-                                Huésped saliente: <strong>${reserva.cliente.nombre}</strong>
-                            </p>
-                            <p style="font-size: 14px; color: #666;">
-                                Fecha check-out: <strong>${this.formatearFecha(reserva.fechaSalida)}</strong>
-                            </p>
-                        </div>
-                        
-                        <div class="checklist-category">
-                            <h3><i class="fas fa-broom"></i> Limpieza General</h3>
-                            ${this.generarChecklistItems([
-                                'Cambiar sábanas y fundas de almohadas',
-                                'Limpiar y desinfectar baños',
-                                'Aspirar alfombras y lavar pisos',
-                                'Limpiar ventanas y espejos',
-                                'Polvo en muebles y superficies'
-                            ])}
-                        </div>
-                        
-                        <div class="checklist-category">
-                            <h3><i class="fas fa-kitchen-set"></i> Cocina</h3>
-                            ${this.generarChecklistItems([
-                                'Limpiar horno y microondas',
-                                'Lavar vajilla y utensilios',
-                                'Limpiar refrigerador',
-                                'Verificar funcionamiento de electrodomésticos',
-                                'Reponer elementos básicos'
-                            ])}
-                        </div>
-                        
-                        <div class="checklist-category">
-                            <h3><i class="fas fa-shower"></i> Baños</h3>
-                            ${this.generarChecklistItems([
-                                'Reponer papel higiénico',
-                                'Reponer jabón y shampoo',
-                                'Limpiar ducha/bañera',
-                                'Desinfectar inodoro',
-                                'Reponer toallas limpias'
-                            ])}
-                        </div>
-                        
-                        <div class="checklist-category">
-                            <h3><i class="fas fa-check-circle"></i> Verificación Final</h3>
-                            ${this.generarChecklistItems([
-                                'Verificar que todas las luces funcionen',
-                                'Probar aire acondicionado/calefacción',
-                                'Confirmar que WiFi funciona',
-                                'Revisar cerraduras y seguridad',
-                                'Dejar llaves en lugar designado'
-                            ])}
-                        </div>
-                        
-                        <div style="margin-top: 24px; padding: 16px; background: #e8f5e9; border-radius: 12px; border-left: 4px solid #4caf50;">
-                            <h4 style="font-size: 14px; margin-bottom: 8px; color: #2e7d32;">
-                                <i class="fas fa-clipboard-check"></i> Estado del Departamento
-                            </h4>
-                            <div style="display: flex; gap: 16px; margin-top: 12px;">
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                                    <input type="radio" name="estado_${reservaId}" value="excelente" checked>
-                                    <span>Excelente - Listo para nuevo huésped</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                                    <input type="radio" name="estado_${reservaId}" value="regular">
-                                    <span>Regular - Necesita atención menor</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-                                    <input type="radio" name="estado_${reservaId}" value="problemas">
-                                    <span>Con problemas - Reportar mantenimiento</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
-                            <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
-                                Cancelar
-                            </button>
-                            <button class="btn btn-primary" onclick="sistema.marcarLimpiezaCompletada(${reservaId})">
-                                <i class="fas fa-check-double"></i> Marcar Limpieza Completada
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-        }
-        
-        marcarLimpiezaCompletada(reservaId) {
-            const estadoSeleccionado = document.querySelector(`input[name="estado_${reservaId}"]:checked`);
-            
-            if (!estadoSeleccionado) {
-                this.mostrarNotificacion('Por favor selecciona el estado del departamento', 'error');
-                return;
-            }
-            
-            const limpiezasCompletadas = JSON.parse(localStorage.getItem('limpiezas_completadas')) || [];
-            limpiezasCompletadas.push({
-                reservaId: reservaId,
-                fecha: new Date().toISOString(),
-                estado: estadoSeleccionado.value
-            });
-            
-            localStorage.setItem('limpiezas_completadas', JSON.stringify(limpiezasCompletadas));
-            
-            // Cerrar modal
-            document.querySelector('.modal.active').remove();
-            
-            this.mostrarNotificacion('Limpieza marcada como completada', 'success');
-            
-            // Actualizar recordatorios
-            this.mostrarRecordatorios();
-        }
+        // Actualizar recordatorios
+        this.mostrarRecordatorios();
+    }
+    
     generarDatosEjemplo() {
         const hoy = new Date();
         const reservasEjemplo = [];
@@ -687,7 +660,7 @@ class RentalSystem {
         this.generarSelectPropiedades();
         this.generarFiltrosDepto();
         this.generarCalendarioMobile();
-        this.generarListaReservasConIndicadores();  // Cambiado
+        this.generarListaReservasConIndicadores();
         this.generarLeyenda();
         this.actualizarEstadisticas();
         this.generarGridDeptos();
@@ -946,7 +919,33 @@ class RentalSystem {
         
         if (esOtroMes) div.classList.add('other-month');
         if (esHoy) div.classList.add('today');
-        if (estaOcupado) div.classList.add('occupied');
+        
+        // Determinar tipo de ocupación
+        if (estaOcupado && !esOtroMes) {
+            // Verificar si es check-in, check-out o día intermedio
+            let esCheckin = false;
+            let esCheckout = false;
+            
+            ocupaciones.forEach(ocupacion => {
+                const entrada = new Date(ocupacion.fechaEntrada);
+                const salida = new Date(ocupacion.fechaSalida);
+                
+                if (fecha.toDateString() === entrada.toDateString()) {
+                    esCheckin = true;
+                }
+                if (fecha.toDateString() === salida.toDateString()) {
+                    esCheckout = true;
+                }
+            });
+            
+            if (esCheckin) {
+                div.classList.add('occupied', 'checkin');
+            } else if (esCheckout) {
+                div.classList.add('occupied', 'checkout');
+            } else {
+                div.classList.add('occupied');
+            }
+        }
         
         // Número del día
         const numSpan = document.createElement('span');
@@ -1013,7 +1012,13 @@ class RentalSystem {
             const entrada = new Date(reserva.fechaEntrada);
             const salida = new Date(reserva.fechaSalida);
             
-            return fecha >= entrada && fecha <= salida;
+            // CORRECCIÓN: Un día está ocupado si la fecha está entre el check-in y check-out INCLUSIVE
+            // Normalizamos las fechas para comparar solo días
+            const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+            const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+            const fechaNormalizada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+            
+            return fechaNormalizada >= entradaNormalizada && fechaNormalizada <= salidaNormalizada;
         });
     }
     
@@ -1102,88 +1107,6 @@ class RentalSystem {
     
     cerrarModalDia() {
         document.getElementById('modalDia').classList.remove('active');
-    }
-    
-    generarListaReservas(filtro = '') {
-        const lista = document.getElementById('listaReservas');
-        const hoy = new Date();
-        
-        let reservasFiltradas = this.reservas
-            .filter(r => new Date(r.fechaEntrada) >= hoy)
-            .sort((a, b) => new Date(a.fechaEntrada) - new Date(b.fechaEntrada));
-        
-        if (filtro) {
-            const termino = filtro.toLowerCase();
-            reservasFiltradas = reservasFiltradas.filter(r => 
-                r.cliente.nombre.toLowerCase().includes(termino) ||
-                r.cliente.dni.includes(termino) ||
-                r.cliente.telefono.includes(termino)
-            );
-        }
-        
-        if (reservasFiltradas.length === 0) {
-            lista.innerHTML = `
-                <div class="empty-state">
-                    <i class="far fa-calendar-check"></i>
-                    <h3>No hay reservas próximas</h3>
-                    <p>No hay reservas programadas para los próximos días.</p>
-                    <button class="btn btn-primary" onclick="sistema.mostrarModalReserva()" style="margin-top: 20px;">
-                        <i class="fas fa-plus"></i> Crear primera reserva
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        lista.innerHTML = '';
-        
-        reservasFiltradas.forEach(reserva => {
-            const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-            const entrada = new Date(reserva.fechaEntrada);
-            const salida = new Date(reserva.fechaSalida);
-            
-            const item = document.createElement('div');
-            item.className = 'reserva-item';
-            item.innerHTML = `
-                <div class="reserva-header">
-                    <div class="reserva-cliente">
-                        <i class="fas fa-user"></i>
-                        ${reserva.cliente.nombre}
-                    </div>
-                    <div class="reserva-depto" style="background: ${propiedad.color}">
-                        ${propiedad.nombre}
-                    </div>
-                </div>
-                
-                <div class="reserva-fechas">
-                    <span><i class="fas fa-sign-in-alt"></i> ${this.formatearFecha(reserva.fechaEntrada)}</span>
-                    <i class="fas fa-arrow-right"></i>
-                    <span><i class="fas fa-sign-out-alt"></i> ${this.formatearFecha(reserva.fechaSalida)}</span>
-                </div>
-                
-                <div class="reserva-contacto">
-                    <span><i class="fas fa-id-card"></i> ${reserva.cliente.dni}</span>
-                    <span><i class="fas fa-phone"></i> ${reserva.cliente.telefono}</span>
-                    ${reserva.cliente.email ? `<span><i class="fas fa-envelope"></i> ${reserva.cliente.email}</span>` : ''}
-                </div>
-                
-                ${reserva.notas ? `
-                    <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #666;">
-                        <strong><i class="fas fa-sticky-note"></i> Notas:</strong> ${reserva.notas}
-                    </div>
-                ` : ''}
-                
-                <div class="reserva-acciones">
-                    <button class="btn-small btn-info" onclick="sistema.editarReserva(${reserva.id})">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn-small btn-danger" onclick="sistema.eliminarReserva(${reserva.id})">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
-                </div>
-            `;
-            lista.appendChild(item);
-        });
     }
     
     generarGridDeptos() {
@@ -1460,7 +1383,7 @@ class RentalSystem {
         
         this.cerrarModal();
         this.generarCalendarioMobile();
-        this.generarListaReservas();
+        this.generarListaReservasConIndicadores();
         this.generarGridDeptos();
         this.actualizarEstadisticas();
         this.mostrarRecordatorios();  // Actualizar recordatorios
@@ -1509,7 +1432,7 @@ class RentalSystem {
             this.guardarDatos();
             
             this.generarCalendarioMobile();
-            this.generarListaReservasConIndicadores();  // Cambiado
+            this.generarListaReservasConIndicadores();
             this.generarGridDeptos();
             this.actualizarEstadisticas();
             this.mostrarRecordatorios();  // Actualizar recordatorios
@@ -1519,7 +1442,7 @@ class RentalSystem {
     }
     
     buscarCliente(termino) {
-        this.generarListaReservasConIndicadores(termino);  // Cambiado
+        this.generarListaReservasConIndicadores(termino);
     }
     
     verDisponibilidad() {
@@ -1646,22 +1569,40 @@ class RentalSystem {
         this.mostrarNotificacion('Datos exportados a CSV', 'success');
     }
     
-    mostrarNotificacion(mensaje, tipo = 'info') {
+    mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
         const notification = document.getElementById('notification');
         const text = document.getElementById('notificationText');
+        
+        // Limpiar notificaciones anteriores
+        notification.classList.remove('show', 'success', 'error', 'warning', 'info', 'limpieza');
         
         // Agregar icono según el tipo
         let icon = 'fas fa-info-circle';
         if (tipo === 'success') icon = 'fas fa-check-circle';
         if (tipo === 'error') icon = 'fas fa-exclamation-circle';
         if (tipo === 'warning') icon = 'fas fa-exclamation-triangle';
+        if (tipo === 'limpieza') icon = 'fas fa-broom';
         
         text.innerHTML = `<i class="${icon}"></i> ${mensaje}`;
-        notification.className = `notification ${tipo} show`;
+        notification.classList.add(tipo, 'show');
         
-        setTimeout(() => {
+        // Configurar cierre automático
+        clearTimeout(this.notificationTimeout);
+        this.notificationTimeout = setTimeout(() => {
             notification.classList.remove('show');
-        }, 3000);
+        }, duracion);
+        
+        // Permitir cerrar manualmente
+        notification.onclick = () => {
+            notification.classList.remove('show');
+            clearTimeout(this.notificationTimeout);
+        };
+    }
+    
+    limpiarNotificaciones() {
+        const notification = document.getElementById('notification');
+        notification.classList.remove('show');
+        clearTimeout(this.notificationTimeout);
     }
     
     // Métodos para funcionalidades adicionales
