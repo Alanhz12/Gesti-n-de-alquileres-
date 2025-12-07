@@ -183,10 +183,10 @@ class RentalSystem {
                     </div>
                     
                     <div class="recordatorio-acciones">
-                        <button class="btn-recordatorio btn-marcar-como" onclick="sistema.marcarRecordatorioCompletado('${recordatorio.id}')">
+                        <button class="btn-recordatorio btn-marcar-como" data-recordatorio-id="${recordatorio.id}">
                             <i class="fas fa-check"></i> Completado
                         </button>
-                        <button class="btn-recordatorio btn-ir-a" onclick="sistema.verDetalleRecordatorio('${recordatorio.id}')">
+                        <button class="btn-recordatorio btn-ir-a" data-recordatorio-id="${recordatorio.id}">
                             <i class="fas fa-clipboard-check"></i> Checklist
                         </button>
                     </div>
@@ -195,6 +195,21 @@ class RentalSystem {
         });
         
         panel.innerHTML = html;
+        
+        // Asignar event listeners a los botones
+        panel.querySelectorAll('.btn-marcar-como').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const recordatorioId = e.target.closest('button').dataset.recordatorioId;
+                this.marcarRecordatorioCompletado(recordatorioId);
+            });
+        });
+        
+        panel.querySelectorAll('.btn-ir-a').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const recordatorioId = e.target.closest('button').dataset.recordatorioId;
+                this.verDetalleRecordatorio(recordatorioId);
+            });
+        });
         
         // Mostrar notificación si hay recordatorios urgentes
         const urgentes = recordatorios.filter(r => r.prioridad === 'urgente').length;
@@ -268,7 +283,7 @@ class RentalSystem {
             const itemId = `check_${idRecordatorio}_${index}`;
             modalContent += `
                 <div class="checklist-item-recordatorio">
-                    <input type="checkbox" id="${itemId}" onchange="sistema.marcarChecklistItem('${idRecordatorio}', ${index})">
+                    <input type="checkbox" id="${itemId}" data-recordatorio-id="${idRecordatorio}" data-item-index="${index}">
                     <label for="${itemId}">${item}</label>
                 </div>
             `;
@@ -278,10 +293,10 @@ class RentalSystem {
                 </div>
                 
                 <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
+                    <button class="btn btn-secondary" id="btnCerrarChecklist">
                         Cerrar
                     </button>
-                    <button class="btn btn-primary" onclick="sistema.completarChecklist('${idRecordatorio}')">
+                    <button class="btn btn-primary" id="btnCompletarChecklist" data-recordatorio-id="${idRecordatorio}">
                         <i class="fas fa-check-double"></i> Marcar Todo Completado
                     </button>
                 </div>
@@ -291,17 +306,51 @@ class RentalSystem {
         // Crear modal temporal
         const modal = document.createElement('div');
         modal.className = 'modal active';
+        modal.style.display = 'flex';
+        
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
                     <h2><i class="fas fa-clipboard-list"></i> Checklist Detallado</h2>
-                    <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                    <button class="btn-close" id="btnCerrarModal">&times;</button>
                 </div>
                 ${modalContent}
             </div>
         `;
         
         document.body.appendChild(modal);
+        
+        // Event listeners para el modal
+        const btnCerrarModal = modal.querySelector('#btnCerrarModal');
+        const btnCerrarChecklist = modal.querySelector('#btnCerrarChecklist');
+        const btnCompletarChecklist = modal.querySelector('#btnCompletarChecklist');
+        
+        const closeModal = () => modal.remove();
+        
+        btnCerrarModal.addEventListener('click', closeModal);
+        btnCerrarChecklist.addEventListener('click', closeModal);
+        
+        // Cerrar al hacer clic en el overlay
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Event listeners para checkboxes
+        modal.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const recordatorioId = e.target.dataset.recordatorioId;
+                const itemIndex = parseInt(e.target.dataset.itemIndex);
+                this.marcarChecklistItem(recordatorioId, itemIndex);
+            });
+        });
+        
+        // Event listener para completar todo
+        btnCompletarChecklist.addEventListener('click', (e) => {
+            const recordatorioId = e.target.dataset.recordatorioId;
+            this.completarChecklist(recordatorioId);
+        });
         
         // Cargar estado del checklist si existe
         this.cargarEstadoChecklist(idRecordatorio);
@@ -315,17 +364,19 @@ class RentalSystem {
         }
         
         const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-        const item = document.querySelector(`#check_${idRecordatorio}_${index}`).closest('.checklist-item-recordatorio');
+        const item = document.querySelector(`#check_${idRecordatorio}_${index}`)?.closest('.checklist-item-recordatorio');
         
-        if (checkbox.checked) {
-            checklistEstado[idRecordatorio][index] = true;
-            item.classList.add('completado');
-        } else {
-            checklistEstado[idRecordatorio][index] = false;
-            item.classList.remove('completado');
+        if (checkbox && item) {
+            if (checkbox.checked) {
+                checklistEstado[idRecordatorio][index] = true;
+                item.classList.add('completado');
+            } else {
+                checklistEstado[idRecordatorio][index] = false;
+                item.classList.remove('completado');
+            }
+            
+            localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
         }
-        
-        localStorage.setItem('checklist_estado', JSON.stringify(checklistEstado));
     }
     
     cargarEstadoChecklist(idRecordatorio) {
@@ -335,7 +386,7 @@ class RentalSystem {
             checklistEstado[idRecordatorio].forEach((completado, index) => {
                 if (completado) {
                     const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-                    const item = checkbox.closest('.checklist-item-recordatorio');
+                    const item = checkbox?.closest('.checklist-item-recordatorio');
                     
                     if (checkbox && item) {
                         checkbox.checked = true;
@@ -359,7 +410,7 @@ class RentalSystem {
         // Marcar todos los checkboxes
         recordatorio.checklist.forEach((item, index) => {
             const checkbox = document.getElementById(`check_${idRecordatorio}_${index}`);
-            const itemElement = checkbox.closest('.checklist-item-recordatorio');
+            const itemElement = checkbox?.closest('.checklist-item-recordatorio');
             
             if (checkbox && itemElement) {
                 checkbox.checked = true;
@@ -382,6 +433,188 @@ class RentalSystem {
         }
         
         this.mostrarNotificacion(mensaje, 'limpieza');
+    }
+    
+    // ========== SISTEMA DE ALERTS PERSONALIZADOS ==========
+    
+    mostrarAlert(mensaje, tipo = 'info') {
+        // Crear overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-alert-overlay active';
+        
+        // Determinar título e icono según tipo
+        let titulo = 'Información';
+        let icono = 'fas fa-info-circle';
+        let claseBoton = 'custom-alert-btn-confirm';
+        
+        if (tipo === 'warning') {
+            titulo = 'Advertencia';
+            icono = 'fas fa-exclamation-triangle';
+        } else if (tipo === 'error') {
+            titulo = 'Error';
+            icono = 'fas fa-exclamation-circle';
+            claseBoton = 'custom-alert-btn-danger';
+        } else if (tipo === 'success') {
+            titulo = 'Éxito';
+            icono = 'fas fa-check-circle';
+        }
+        
+        overlay.innerHTML = `
+            <div class="custom-alert-container">
+                <div class="custom-alert-header">
+                    <i class="${icono}"></i>
+                    <h3>${titulo}</h3>
+                </div>
+                <div class="custom-alert-body">
+                    <div class="custom-alert-message">${mensaje}</div>
+                </div>
+                <div class="custom-alert-footer">
+                    <button class="custom-alert-btn ${claseBoton}" id="alertConfirmBtn">
+                        <i class="fas fa-check"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Event listener para el botón
+        const confirmBtn = overlay.querySelector('#alertConfirmBtn');
+        confirmBtn.addEventListener('click', () => {
+            overlay.remove();
+        });
+        
+        // Cerrar al hacer clic fuera
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+        
+        // Enfocar el botón para que funcione con Enter
+        setTimeout(() => {
+            confirmBtn.focus();
+        }, 100);
+    }
+    
+    mostrarConfirm(mensaje, callbackConfirm, callbackCancel = null) {
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-alert-overlay active';
+        
+        overlay.innerHTML = `
+            <div class="custom-alert-container">
+                <div class="custom-alert-header">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>Confirmar</h3>
+                </div>
+                <div class="custom-alert-body">
+                    <div class="custom-alert-message">${mensaje}</div>
+                </div>
+                <div class="custom-alert-footer">
+                    <button class="custom-alert-btn custom-alert-btn-cancel" id="confirmCancelBtn">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="custom-alert-btn custom-alert-btn-danger" id="confirmOkBtn">
+                        <i class="fas fa-check"></i> Confirmar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Event listeners
+        const cancelBtn = overlay.querySelector('#confirmCancelBtn');
+        const okBtn = overlay.querySelector('#confirmOkBtn');
+        
+        const closeOverlay = () => overlay.remove();
+        
+        cancelBtn.addEventListener('click', () => {
+            closeOverlay();
+            if (callbackCancel) callbackCancel();
+        });
+        
+        okBtn.addEventListener('click', () => {
+            closeOverlay();
+            if (callbackConfirm) callbackConfirm();
+        });
+        
+        // Cerrar al hacer clic fuera
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeOverlay();
+                if (callbackCancel) callbackCancel();
+            }
+        });
+        
+        // Enfocar botón cancelar por defecto
+        setTimeout(() => {
+            cancelBtn.focus();
+        }, 100);
+    }
+    
+    mostrarPrompt(mensaje, valorDefault = '', callback) {
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-alert-overlay active';
+        
+        overlay.innerHTML = `
+            <div class="custom-alert-container">
+                <div class="custom-alert-header">
+                    <i class="fas fa-edit"></i>
+                    <h3>Ingresar valor</h3>
+                </div>
+                <div class="custom-alert-body">
+                    <div class="custom-alert-message">${mensaje}</div>
+                    <input type="text" class="custom-alert-input" id="customPromptInput" value="${valorDefault}" placeholder="Ingrese aquí...">
+                </div>
+                <div class="custom-alert-footer">
+                    <button class="custom-alert-btn custom-alert-btn-cancel" id="promptCancelBtn">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="custom-alert-btn custom-alert-btn-confirm" id="promptOkBtn">
+                        <i class="fas fa-check"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Event listeners
+        const cancelBtn = overlay.querySelector('#promptCancelBtn');
+        const okBtn = overlay.querySelector('#promptOkBtn');
+        const input = overlay.querySelector('#customPromptInput');
+        
+        const closeOverlay = () => overlay.remove();
+        
+        cancelBtn.addEventListener('click', closeOverlay);
+        
+        okBtn.addEventListener('click', () => {
+            if (input.value.trim()) {
+                callback(input.value);
+            }
+            closeOverlay();
+        });
+        
+        // Enfocar el input
+        setTimeout(() => {
+            input.focus();
+            input.select();
+            
+            // Permitir Enter para aceptar
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    okBtn.click();
+                }
+            });
+        }, 100);
+        
+        // Cerrar al hacer clic fuera
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closeOverlay();
+            }
+        });
     }
     
     // ========== INDICADORES EN LAS VISTAS ==========
@@ -412,11 +645,18 @@ class RentalSystem {
                     <i class="far fa-calendar-check"></i>
                     <h3>No hay reservas próximas</h3>
                     <p>No hay reservas programadas para los próximos días.</p>
-                    <button class="btn btn-primary" onclick="sistema.mostrarModalReserva()" style="margin-top: 20px;">
+                    <button class="btn btn-primary" id="btnCrearPrimeraReserva" style="margin-top: 20px;">
                         <i class="fas fa-plus"></i> Crear primera reserva
                     </button>
                 </div>
             `;
+            
+            // Event listener para el botón
+            const btn = lista.querySelector('#btnCrearPrimeraReserva');
+            if (btn) {
+                btn.addEventListener('click', () => this.mostrarModalReserva());
+            }
+            
             return;
         }
         
@@ -468,20 +708,42 @@ class RentalSystem {
                 ` : ''}
                 
                 <div class="reserva-acciones">
-                    <button class="btn-small btn-info" onclick="sistema.editarReserva(${reserva.id})">
+                    <button class="btn-small btn-info btn-editar-reserva" data-reserva-id="${reserva.id}">
                         <i class="fas fa-edit"></i> Editar
                     </button>
-                    <button class="btn-small btn-danger" onclick="sistema.eliminarReserva(${reserva.id})">
+                    <button class="btn-small btn-danger btn-eliminar-reserva" data-reserva-id="${reserva.id}">
                         <i class="fas fa-trash"></i> Eliminar
                     </button>
                     ${salida.toDateString() === hoy.toDateString() || 
                       salida.toDateString() === manana.toDateString() ? 
-                      `<button class="btn-small" style="background: #ff9800; color: white;" onclick="sistema.mostrarChecklistLimpieza(${reserva.id})">
+                      `<button class="btn-small btn-checklist-limpieza" data-reserva-id="${reserva.id}" style="background: #ff9800; color: white;">
                         <i class="fas fa-broom"></i> Checklist
                        </button>` : ''}
                 </div>
             `;
             lista.appendChild(item);
+        });
+        
+        // Asignar event listeners a los botones
+        lista.querySelectorAll('.btn-editar-reserva').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reservaId = parseInt(e.target.closest('button').dataset.reservaId);
+                this.editarReserva(reservaId);
+            });
+        });
+        
+        lista.querySelectorAll('.btn-eliminar-reserva').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reservaId = parseInt(e.target.closest('button').dataset.reservaId);
+                this.eliminarReserva(reservaId);
+            });
+        });
+        
+        lista.querySelectorAll('.btn-checklist-limpieza').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reservaId = parseInt(e.target.closest('button').dataset.reservaId);
+                this.mostrarChecklistLimpieza(reservaId);
+            });
         });
     }
     
@@ -496,11 +758,13 @@ class RentalSystem {
         
         const modal = document.createElement('div');
         modal.className = 'modal active';
+        modal.style.display = 'flex';
+        
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
                     <h2><i class="fas fa-broom"></i> Checklist de Limpieza</h2>
-                    <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                    <button class="btn-close" id="btnCerrarChecklistModal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div style="margin-bottom: 20px; padding: 16px; background: ${esHoy ? '#fff8e1' : '#e3f2fd'}; border-radius: 12px; border-left: 4px solid ${esHoy ? '#ff9800' : '#2196f3'};">
@@ -583,10 +847,10 @@ class RentalSystem {
                     </div>
                     
                     <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end;">
-                        <button class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
+                        <button class="btn btn-secondary" id="btnCancelarLimpieza">
                             Cancelar
                         </button>
-                        <button class="btn btn-primary" onclick="sistema.marcarLimpiezaCompletada(${reservaId})">
+                        <button class="btn btn-primary" id="btnMarcarLimpiezaCompletada" data-reserva-id="${reservaId}">
                             <i class="fas fa-check-double"></i> Marcar Limpieza Completada
                         </button>
                     </div>
@@ -595,6 +859,28 @@ class RentalSystem {
         `;
         
         document.body.appendChild(modal);
+        
+        // Event listeners
+        const btnCerrar = modal.querySelector('#btnCerrarChecklistModal');
+        const btnCancelar = modal.querySelector('#btnCancelarLimpieza');
+        const btnMarcar = modal.querySelector('#btnMarcarLimpiezaCompletada');
+        
+        const closeModal = () => modal.remove();
+        
+        btnCerrar.addEventListener('click', closeModal);
+        btnCancelar.addEventListener('click', closeModal);
+        
+        btnMarcar.addEventListener('click', (e) => {
+            const reservaId = parseInt(e.target.dataset.reservaId);
+            this.marcarLimpiezaCompletada(reservaId);
+        });
+        
+        // Cerrar al hacer clic en el overlay
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
     }
     
     marcarLimpiezaCompletada(reservaId) {
@@ -615,7 +901,7 @@ class RentalSystem {
         localStorage.setItem('limpiezas_completadas', JSON.stringify(limpiezasCompletadas));
         
         // Cerrar modal
-        document.querySelector('.modal.active').remove();
+        document.querySelector('.modal.active')?.remove();
         
         this.mostrarNotificacion('Limpieza marcada como completada', 'success');
         
@@ -640,6 +926,8 @@ class RentalSystem {
                 propiedad: i,
                 fechaEntrada: fechaInicio.toISOString().split('T')[0],
                 fechaSalida: fechaFin.toISOString().split('T')[0],
+                horaEntrada: '14:00',
+                horaSalida: '10:00',
                 cliente: {
                     nombre: `Cliente Ejemplo ${i}`,
                     dni: `1234567${i}`,
@@ -688,7 +976,7 @@ class RentalSystem {
             const panel = document.getElementById('recordatoriosPanel');
             const badge = document.getElementById('badgeRecordatorios');
             
-            if (!panel.contains(e.target) && !badge.contains(e.target)) {
+            if (panel && badge && !panel.contains(e.target) && !badge.contains(e.target)) {
                 panel.classList.remove('show');
             }
         });
@@ -920,30 +1208,50 @@ class RentalSystem {
         if (esOtroMes) div.classList.add('other-month');
         if (esHoy) div.classList.add('today');
         
-        // Determinar tipo de ocupación
+        // Determinar tipos de eventos en este día
+        let tieneCheckin = false;
+        let tieneCheckout = false;
+        let tieneOcupacionIntermedia = false;
+        
         if (estaOcupado && !esOtroMes) {
-            // Verificar si es check-in, check-out o día intermedio
-            let esCheckin = false;
-            let esCheckout = false;
-            
             ocupaciones.forEach(ocupacion => {
                 const entrada = new Date(ocupacion.fechaEntrada);
                 const salida = new Date(ocupacion.fechaSalida);
                 
-                if (fecha.toDateString() === entrada.toDateString()) {
-                    esCheckin = true;
+                const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+                const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+                const fechaNormalizada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+                
+                if (fechaNormalizada.getTime() === entradaNormalizada.getTime()) {
+                    tieneCheckin = true;
                 }
-                if (fecha.toDateString() === salida.toDateString()) {
-                    esCheckout = true;
+                if (fechaNormalizada.getTime() === salidaNormalizada.getTime()) {
+                    tieneCheckout = true;
+                }
+                if (fechaNormalizada > entradaNormalizada && fechaNormalizada < salidaNormalizada) {
+                    tieneOcupacionIntermedia = true;
                 }
             });
+        }
+        
+        // Aplicar clases según los eventos
+        if (estaOcupado && !esOtroMes) {
+            div.classList.add('occupied');
             
-            if (esCheckin) {
-                div.classList.add('occupied', 'checkin');
-            } else if (esCheckout) {
-                div.classList.add('occupied', 'checkout');
-            } else {
-                div.classList.add('occupied');
+            if (tieneCheckin && tieneCheckout) {
+                div.classList.add('checkin-checkout-same-day');
+                div.classList.add('has-checkin');
+                div.classList.add('has-checkout');
+            } else if (tieneCheckin) {
+                div.classList.add('checkin');
+                div.classList.add('has-checkin');
+            } else if (tieneCheckout) {
+                div.classList.add('checkout');
+                div.classList.add('has-checkout');
+            }
+            
+            if (tieneOcupacionIntermedia && !(tieneCheckin && tieneCheckout)) {
+                div.classList.add('intermediate');
             }
         }
         
@@ -958,20 +1266,37 @@ class RentalSystem {
         
         if (estaOcupado && !esOtroMes) {
             const deptosOcupados = new Set(ocupaciones.map(o => o.propiedad));
-            this.propiedades.forEach(prop => {
-                if (deptosOcupados.has(prop.id)) {
-                    const dot = document.createElement('span');
-                    dot.className = 'status-dot';
-                    dot.style.background = prop.color;
-                    statusDiv.appendChild(dot);
-                }
-            });
+            
+            // Si hay check-in y check-out el mismo día, mostramos iconos especiales
+            if (tieneCheckin && tieneCheckout) {
+                const iconContainer = document.createElement('div');
+                iconContainer.className = 'double-event-icons';
+                iconContainer.innerHTML = `
+                    <span class="event-icon checkin-icon" title="Check-in">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </span>
+                    <span class="event-icon checkout-icon" title="Check-out">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </span>
+                `;
+                statusDiv.appendChild(iconContainer);
+            } else {
+                // Mostrar puntos de color normales
+                this.propiedades.forEach(prop => {
+                    if (deptosOcupados.has(prop.id)) {
+                        const dot = document.createElement('span');
+                        dot.className = 'status-dot';
+                        dot.style.background = prop.color;
+                        statusDiv.appendChild(dot);
+                    }
+                });
+            }
         }
         
         div.appendChild(numSpan);
         div.appendChild(statusDiv);
         
-        // Tooltip y click handler
+        // Tooltip mejorado
         if (fecha && !esOtroMes) {
             const fechaStr = fecha.toISOString().split('T')[0];
             const fechaFormateada = fecha.toLocaleDateString('es-ES', {
@@ -982,11 +1307,33 @@ class RentalSystem {
             });
             
             let tooltip = fechaFormateada;
+            
             if (estaOcupado) {
-                const nombresDeptos = ocupaciones.map(o => 
-                    this.propiedades.find(p => p.id == o.propiedad).nombre
-                ).join(', ');
-                tooltip += `\nOcupado: ${nombresDeptos}`;
+                const eventosDia = [];
+                
+                ocupaciones.forEach(ocupacion => {
+                    const propiedad = this.propiedades.find(p => p.id == ocupacion.propiedad);
+                    const entrada = new Date(ocupacion.fechaEntrada);
+                    const salida = new Date(ocupacion.fechaSalida);
+                    
+                    const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+                    const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+                    const fechaNormalizada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+                    
+                    if (entradaNormalizada.getTime() === fechaNormalizada.getTime()) {
+                        eventosDia.push(`✔ Check-in: ${propiedad.nombre} (${ocupacion.cliente.nombre})`);
+                    }
+                    if (salidaNormalizada.getTime() === fechaNormalizada.getTime()) {
+                        eventosDia.push(`✖ Check-out: ${propiedad.nombre} (${ocupacion.cliente.nombre})`);
+                    }
+                    if (fechaNormalizada > entradaNormalizada && fechaNormalizada < salidaNormalizada) {
+                        eventosDia.push(`◉ Ocupado: ${propiedad.nombre} (${ocupacion.cliente.nombre})`);
+                    }
+                });
+                
+                if (eventosDia.length > 0) {
+                    tooltip += '\n\n' + eventosDia.join('\n');
+                }
             } else {
                 tooltip += '\nDisponible';
             }
@@ -1012,13 +1359,32 @@ class RentalSystem {
             const entrada = new Date(reserva.fechaEntrada);
             const salida = new Date(reserva.fechaSalida);
             
-            // CORRECCIÓN: Un día está ocupado si la fecha está entre el check-in y check-out INCLUSIVE
             // Normalizamos las fechas para comparar solo días
             const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
             const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
             const fechaNormalizada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
             
-            return fechaNormalizada >= entradaNormalizada && fechaNormalizada <= salidaNormalizada;
+            // Un día está ocupado si:
+            // 1. La fecha está entre check-in y check-out (excluyendo check-out si hay check-in el mismo día)
+            // 2. Es día de check-in
+            // 3. Es día de check-out (pero permitimos check-in el mismo día)
+            
+            // Es día de check-in
+            if (fechaNormalizada.getTime() === entradaNormalizada.getTime()) {
+                return true;
+            }
+            
+            // Es día intermedio
+            if (fechaNormalizada > entradaNormalizada && fechaNormalizada < salidaNormalizada) {
+                return true;
+            }
+            
+            // Es día de check-out (pero permitimos otro check-in el mismo día)
+            if (fechaNormalizada.getTime() === salidaNormalizada.getTime()) {
+                return true;
+            }
+            
+            return false;
         });
     }
     
@@ -1042,67 +1408,191 @@ class RentalSystem {
                     <i class="far fa-calendar-check"></i>
                     <h3>Día disponible</h3>
                     <p>No hay reservas para esta fecha.</p>
-                    <button class="btn btn-primary" onclick="sistema.mostrarModalReserva(); sistema.cerrarModalDia()" style="margin-top: 20px;">
+                    <button class="btn btn-primary" id="btnCrearReservaDesdeModal" style="margin-top: 20px;">
                         <i class="fas fa-plus"></i> Crear Reserva
                     </button>
                 </div>
             `;
+            
+            // Event listener para el botón
+            const btn = contenido.querySelector('#btnCrearReservaDesdeModal');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.mostrarModalReserva();
+                    this.cerrarModalDia();
+                });
+            }
         } else {
             let html = '<div class="dia-ocupaciones">';
             
+            // Separar eventos por tipo
+            const checkins = [];
+            const checkouts = [];
+            const ocupacionesIntermedias = [];
+            
             ocupaciones.forEach(ocupacion => {
-                const propiedad = this.propiedades.find(p => p.id == ocupacion.propiedad);
                 const entrada = new Date(ocupacion.fechaEntrada);
                 const salida = new Date(ocupacion.fechaSalida);
                 
-                const esCheckin = entrada.toDateString() === fecha.toDateString();
-                const esCheckout = salida.toDateString() === fecha.toDateString();
+                const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+                const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+                const fechaNormalizada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
                 
-                html += `
-                    <div class="ocupacion-item">
-                        <div class="ocupacion-header">
-                            <div class="ocupacion-cliente">${ocupacion.cliente.nombre}</div>
-                            <div class="ocupacion-depto" style="background: ${propiedad.color}">
-                                ${propiedad.nombre}
-                            </div>
-                        </div>
-                        
-                        <div class="ocupacion-dates">
-                            <i class="fas fa-sign-in-alt"></i>
-                            <span>${entrada.toLocaleDateString('es-ES')}</span>
-                            <i class="fas fa-arrow-right"></i>
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span>${salida.toLocaleDateString('es-ES')}</span>
-                            ${esCheckin ? '<span class="badge" style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">Check-in</span>' : ''}
-                            ${esCheckout ? '<span class="badge" style="background: #f72585; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">Check-out</span>' : ''}
-                        </div>
-                        
-                        <div class="ocupacion-contacto">
-                            <span><i class="fas fa-id-card"></i> ${ocupacion.cliente.dni}</span>
-                            <span><i class="fas fa-phone"></i> ${ocupacion.cliente.telefono}</span>
-                            ${ocupacion.cliente.email ? `<span><i class="fas fa-envelope"></i> ${ocupacion.cliente.email}</span>` : ''}
-                        </div>
-                        
-                        ${ocupacion.notas ? `
-                            <div style="margin-top: 12px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px;">
-                                <strong>Notas:</strong> ${ocupacion.notas}
-                            </div>
-                        ` : ''}
-                        
-                        <div class="reserva-acciones" style="margin-top: 16px;">
-                            <button class="btn-small btn-danger" onclick="sistema.eliminarReserva(${ocupacion.id}); sistema.cerrarModalDia()">
-                                <i class="fas fa-trash"></i> Eliminar
-                            </button>
-                        </div>
-                    </div>
-                `;
+                if (entradaNormalizada.getTime() === fechaNormalizada.getTime()) {
+                    checkins.push(ocupacion);
+                } else if (salidaNormalizada.getTime() === fechaNormalizada.getTime()) {
+                    checkouts.push(ocupacion);
+                } else {
+                    ocupacionesIntermedias.push(ocupacion);
+                }
             });
+            
+            // Mostrar check-ins primero
+            if (checkins.length > 0) {
+                html += `
+                    <div class="event-section">
+                        <h4 style="display: flex; align-items: center; gap: 8px; color: #4caf50; margin-bottom: 12px;">
+                            <i class="fas fa-sign-in-alt"></i> Check-ins (${checkins.length})
+                        </h4>
+                `;
+                
+                checkins.forEach(ocupacion => {
+                    html += this.generarTarjetaEvento(ocupacion, 'checkin', fecha);
+                });
+                
+                html += '</div>';
+            }
+            
+            // Mostrar check-outs
+            if (checkouts.length > 0) {
+                html += `
+                    <div class="event-section">
+                        <h4 style="display: flex; align-items: center; gap: 8px; color: #ff9800; margin-bottom: 12px;">
+                            <i class="fas fa-sign-out-alt"></i> Check-outs (${checkouts.length})
+                        </h4>
+                `;
+                
+                checkouts.forEach(ocupacion => {
+                    html += this.generarTarjetaEvento(ocupacion, 'checkout', fecha);
+                });
+                
+                html += '</div>';
+            }
+            
+            // Mostrar ocupaciones intermedias
+            if (ocupacionesIntermedias.length > 0) {
+                html += `
+                    <div class="event-section">
+                        <h4 style="display: flex; align-items: center; gap: 8px; color: #f72585; margin-bottom: 12px;">
+                            <i class="fas fa-home"></i> Ocupaciones en curso (${ocupacionesIntermedias.length})
+                        </h4>
+                `;
+                
+                ocupacionesIntermedias.forEach(ocupacion => {
+                    html += this.generarTarjetaEvento(ocupacion, 'intermediate', fecha);
+                });
+                
+                html += '</div>';
+            }
             
             html += '</div>';
             contenido.innerHTML = html;
+            
+            // Asignar event listeners a los botones generados dinámicamente
+            contenido.querySelectorAll('.btn-eliminar-reserva-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const reservaId = parseInt(e.target.closest('button').dataset.reservaId);
+                    this.eliminarReserva(reservaId);
+                });
+            });
+            
+            contenido.querySelectorAll('.btn-editar-reserva-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const reservaId = parseInt(e.target.closest('button').dataset.reservaId);
+                    this.editarReserva(reservaId);
+                    this.cerrarModalDia();
+                });
+            });
         }
         
         modal.classList.add('active');
+    }
+    
+    generarTarjetaEvento(ocupacion, tipo, fechaActual) {
+        const propiedad = this.propiedades.find(p => p.id == ocupacion.propiedad);
+        const entrada = new Date(ocupacion.fechaEntrada);
+        const salida = new Date(ocupacion.fechaSalida);
+        
+        let claseColor = '';
+        let icono = '';
+        let estado = '';
+        
+        switch(tipo) {
+            case 'checkin':
+                claseColor = '#4caf50';
+                icono = 'fa-sign-in-alt';
+                estado = '🟢 Llegada hoy';
+                break;
+            case 'checkout':
+                claseColor = '#ff9800';
+                icono = 'fa-sign-out-alt';
+                estado = '🟠 Salida hoy';
+                break;
+            case 'intermediate':
+                claseColor = '#f72585';
+                icono = 'fa-home';
+                const diasTranscurridos = Math.ceil((fechaActual - entrada) / (1000 * 60 * 60 * 24));
+                const diasTotales = Math.ceil((salida - entrada) / (1000 * 60 * 60 * 24));
+                estado = `⏳ Día ${diasTranscurridos} de ${diasTotales}`;
+                break;
+        }
+        
+        return `
+            <div class="ocupacion-item" style="border-left: 4px solid ${claseColor}; margin-bottom: 16px;">
+                <div class="ocupacion-header">
+                    <div class="ocupacion-cliente">
+                        <i class="fas ${icono}" style="color: ${claseColor}; margin-right: 8px;"></i>
+                        ${ocupacion.cliente.nombre}
+                    </div>
+                    <div class="ocupacion-depto" style="background: ${propiedad.color}">
+                        ${propiedad.nombre}
+                    </div>
+                </div>
+                
+                <div class="ocupacion-dates">
+                    <span style="background: ${claseColor}20; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: ${claseColor};">
+                        ${estado}
+                    </span>
+                </div>
+                
+                <div class="ocupacion-fechas-detalle" style="margin: 12px 0; font-size: 13px; color: #666;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <i class="fas fa-calendar-day" style="color: ${claseColor};"></i>
+                        <strong>Check-in:</strong> ${this.formatearFecha(ocupacion.fechaEntrada)}
+                        ${ocupacion.horaEntrada ? `<span style="background: ${claseColor}30; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${ocupacion.horaEntrada}</span>` : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-calendar-day" style="color: ${claseColor};"></i>
+                        <strong>Check-out:</strong> ${this.formatearFecha(ocupacion.fechaSalida)}
+                        ${ocupacion.horaSalida ? `<span style="background: ${claseColor}30; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${ocupacion.horaSalida}</span>` : ''}
+                    </div>
+                </div>
+                
+                <div class="ocupacion-contacto" style="font-size: 13px;">
+                    <span><i class="fas fa-id-card"></i> ${ocupacion.cliente.dni}</span>
+                    <span><i class="fas fa-phone"></i> ${ocupacion.cliente.telefono}</span>
+                </div>
+                
+                <div class="reserva-acciones" style="margin-top: 16px;">
+                    <button class="btn-small btn-danger btn-eliminar-reserva-modal" data-reserva-id="${ocupacion.id}">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                    <button class="btn-small btn-info btn-editar-reserva-modal" data-reserva-id="${ocupacion.id}">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                </div>
+            </div>
+        `;
     }
     
     cerrarModalDia() {
@@ -1157,12 +1647,20 @@ class RentalSystem {
                     </div>
                 `}
                 
-                <button class="btn-small btn-info" onclick="sistema.verDepto(${propiedad.id})" style="width: 100%; margin-top: 16px;">
+                <button class="btn-small btn-info btn-ver-depto" data-depto-id="${propiedad.id}" style="width: 100%; margin-top: 16px;">
                     <i class="fas fa-eye"></i> Ver Detalles
                 </button>
             `;
             
             grid.appendChild(card);
+        });
+        
+        // Asignar event listeners a los botones
+        grid.querySelectorAll('.btn-ver-depto').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const deptoId = parseInt(e.target.closest('button').dataset.deptoId);
+                this.verDepto(deptoId);
+            });
         });
     }
     
@@ -1190,21 +1688,21 @@ class RentalSystem {
         const propiedad = this.propiedades.find(p => p.id == propiedadId);
         const reservasDepto = this.reservas.filter(r => r.propiedad == propiedadId);
         
-        let mensaje = `${propiedad.nombre}\n${propiedad.direccion}\n\n`;
-        mensaje += `Reservas totales: ${reservasDepto.length}\n\n`;
+        let mensaje = `<strong>${propiedad.nombre}</strong><br>${propiedad.direccion}<br><br>`;
+        mensaje += `<strong>Reservas totales:</strong> ${reservasDepto.length}<br><br>`;
         
         const reservasFuturas = reservasDepto.filter(r => new Date(r.fechaEntrada) >= new Date());
         
         if (reservasFuturas.length > 0) {
-            mensaje += 'Próximas reservas:\n';
+            mensaje += '<strong>Próximas reservas:</strong><br>';
             reservasFuturas.slice(0, 3).forEach(reserva => {
-                mensaje += `• ${reserva.cliente.nombre}: ${this.formatearFecha(reserva.fechaEntrada)} al ${this.formatearFecha(reserva.fechaSalida)}\n`;
+                mensaje += `<strong>• ${reserva.cliente.nombre}:</strong> ${this.formatearFecha(reserva.fechaEntrada)} al ${this.formatearFecha(reserva.fechaSalida)}<br>`;
             });
         } else {
-            mensaje += 'Sin reservas futuras\n';
+            mensaje += '<strong>Sin reservas futuras</strong><br>';
         }
         
-        alert(mensaje);
+        this.mostrarAlert(mensaje, 'info');
     }
     
     formatearFecha(fechaStr) {
@@ -1258,19 +1756,19 @@ class RentalSystem {
         const reservasHoy = this.reservas.filter(r => r.fechaEntrada === hoy);
         
         if (reservasHoy.length === 0) {
-            this.mostrarNotificacion('No hay check-ins para hoy', 'info');
+            this.mostrarAlert('No hay check-ins para hoy', 'info');
         } else {
-            let mensaje = `Check-ins hoy (${reservasHoy.length}):\n\n`;
+            let mensaje = `<strong>Check-ins hoy (${reservasHoy.length}):</strong><br><br>`;
             reservasHoy.forEach(reserva => {
                 const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
-                mensaje += `• ${reserva.cliente.nombre}\n  ${propiedad.nombre}\n  Tel: ${reserva.cliente.telefono}\n\n`;
+                mensaje += `<strong>• ${reserva.cliente.nombre}</strong><br>${propiedad.nombre}<br>Tel: ${reserva.cliente.telefono}<br><br>`;
             });
-            alert(mensaje);
+            this.mostrarAlert(mensaje, 'info');
         }
     }
     
     mostrarOcupacionActual() {
-        let mensaje = 'Ocupación actual:\n\n';
+        let mensaje = '<strong>Ocupación actual:</strong><br><br>';
         
         this.propiedades.forEach(prop => {
             const estaOcupado = this.reservas.some(r => {
@@ -1280,10 +1778,10 @@ class RentalSystem {
                 return r.propiedad == prop.id && hoy >= entrada && hoy <= salida;
             });
             
-            mensaje += `${prop.nombre}: ${estaOcupado ? '🔴 Ocupado' : '🟢 Disponible'}\n`;
+            mensaje += `<strong>${prop.nombre}:</strong> ${estaOcupado ? '<span style="color: #f72585">🔴 Ocupado</span>' : '<span style="color: #4caf50">🟢 Disponible</span>'}<br>`;
         });
         
-        alert(mensaje);
+        this.mostrarAlert(mensaje, 'info');
     }
     
     mostrarClientesMes() {
@@ -1291,18 +1789,18 @@ class RentalSystem {
         const clientesMes = this.reservas.filter(r => r.fechaEntrada >= inicioMes);
         
         if (clientesMes.length === 0) {
-            this.mostrarNotificacion('No hay clientes este mes', 'info');
+            this.mostrarAlert('No hay clientes este mes', 'info');
         } else {
-            let mensaje = `Clientes este mes (${clientesMes.length}):\n\n`;
+            let mensaje = `<strong>Clientes este mes (${clientesMes.length}):</strong><br><br>`;
             clientesMes.slice(0, 10).forEach(reserva => {
-                mensaje += `• ${reserva.cliente.nombre}\n  ${this.formatearFecha(reserva.fechaEntrada)}\n\n`;
+                mensaje += `<strong>• ${reserva.cliente.nombre}</strong><br>${this.formatearFecha(reserva.fechaEntrada)}<br><br>`;
             });
             
             if (clientesMes.length > 10) {
-                mensaje += `... y ${clientesMes.length - 10} más`;
+                mensaje += `<em>... y ${clientesMes.length - 10} más</em>`;
             }
             
-            alert(mensaje);
+            this.mostrarAlert(mensaje, 'info');
         }
     }
     
@@ -1316,15 +1814,15 @@ class RentalSystem {
         }).sort((a, b) => new Date(a.fechaEntrada) - new Date(b.fechaEntrada));
         
         if (proximas.length === 0) {
-            this.mostrarNotificacion('No hay llegadas en los próximos 7 días', 'info');
+            this.mostrarAlert('No hay llegadas en los próximos 7 días', 'info');
         } else {
-            let mensaje = `Próximas llegadas (${proximas.length}):\n\n`;
+            let mensaje = `<strong>Próximas llegadas (${proximas.length}):</strong><br><br>`;
             proximas.forEach(reserva => {
                 const propiedad = this.propiedades.find(p => p.id == reserva.propiedad);
                 const diasFaltan = Math.ceil((new Date(reserva.fechaEntrada) - new Date()) / (1000 * 60 * 60 * 24));
-                mensaje += `• ${reserva.cliente.nombre}\n  ${propiedad.nombre}\n  En ${diasFaltan} días (${this.formatearFecha(reserva.fechaEntrada)})\n\n`;
+                mensaje += `<strong>• ${reserva.cliente.nombre}</strong><br>${propiedad.nombre}<br>En ${diasFaltan} días (${this.formatearFecha(reserva.fechaEntrada)})<br><br>`;
             });
-            alert(mensaje);
+            this.mostrarAlert(mensaje, 'info');
         }
     }
     
@@ -1346,11 +1844,17 @@ class RentalSystem {
         const form = document.getElementById('formReserva');
         const editingId = form.dataset.editingId;
         
+        // Obtener horas
+        const horaEntrada = document.getElementById('horaEntrada') ? document.getElementById('horaEntrada').value : '14:00';
+        const horaSalida = document.getElementById('horaSalida') ? document.getElementById('horaSalida').value : '10:00';
+        
         const reserva = {
             id: editingId ? parseInt(editingId) : Date.now(),
             propiedad: parseInt(document.getElementById('selectDepto').value),
             fechaEntrada: document.getElementById('fechaEntrada').value,
             fechaSalida: document.getElementById('fechaSalida').value,
+            horaEntrada: horaEntrada,
+            horaSalida: horaSalida,
             cliente: {
                 nombre: document.getElementById('nombreCliente').value,
                 dni: document.getElementById('dniCliente').value,
@@ -1394,15 +1898,49 @@ class RentalSystem {
         const entrada = new Date(reserva.fechaEntrada);
         const salida = new Date(reserva.fechaSalida);
         
+        // Normalizamos las fechas para comparar solo días
+        const entradaNormalizada = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+        const salidaNormalizada = new Date(salida.getFullYear(), salida.getMonth(), salida.getDate());
+        
         return !this.reservas.some(r => {
             if (r.propiedad != reserva.propiedad || r.id === reserva.id) return false;
             
             const rEntrada = new Date(r.fechaEntrada);
             const rSalida = new Date(r.fechaSalida);
             
-            return (entrada >= rEntrada && entrada <= rSalida) ||
-                   (salida >= rEntrada && salida <= rSalida) ||
-                   (entrada <= rEntrada && salida >= rSalida);
+            // Normalizamos las fechas de la reserva existente
+            const rEntradaNormalizada = new Date(rEntrada.getFullYear(), rEntrada.getMonth(), rEntrada.getDate());
+            const rSalidaNormalizada = new Date(rSalida.getFullYear(), rSalida.getMonth(), rSalida.getDate());
+            
+            // PERMITIMOS check-out y check-in el mismo día
+            // Solo consideramos conflicto si:
+            // 1. La nueva entrada es ANTES del check-out de una reserva existente (mismo día pero horas diferentes)
+            // 2. La nueva salida es DESPUÉS del check-in de una reserva existente (mismo día pero horas diferentes)
+            // 3. Hay solapamiento completo
+            
+            // Caso 1: Mismo día check-out y check-in - PERMITIDO
+            // Solo es conflicto si el check-in nuevo es antes del check-out existente
+            if (entradaNormalizada.getTime() === rSalidaNormalizada.getTime() && 
+                salidaNormalizada.getTime() === rEntradaNormalizada.getTime()) {
+                return false; // Permitir check-out y check-in el mismo día
+            }
+            
+            // Caso 2: Nueva reserva empieza durante una reserva existente
+            if (entradaNormalizada >= rEntradaNormalizada && entradaNormalizada < rSalidaNormalizada) {
+                return true;
+            }
+            
+            // Caso 3: Nueva reserva termina durante una reserva existente
+            if (salidaNormalizada > rEntradaNormalizada && salidaNormalizada <= rSalidaNormalizada) {
+                return true;
+            }
+            
+            // Caso 4: Nueva reserva contiene completamente a la existente
+            if (entradaNormalizada <= rEntradaNormalizada && salidaNormalizada >= rSalidaNormalizada) {
+                return true;
+            }
+            
+            return false;
         });
     }
     
@@ -1420,6 +1958,14 @@ class RentalSystem {
         document.getElementById('emailCliente').value = reserva.cliente.email || '';
         document.getElementById('notasReserva').value = reserva.notas || '';
         
+        // Si existen campos de hora, llenarlos
+        if (document.getElementById('horaEntrada') && reserva.horaEntrada) {
+            document.getElementById('horaEntrada').value = reserva.horaEntrada;
+        }
+        if (document.getElementById('horaSalida') && reserva.horaSalida) {
+            document.getElementById('horaSalida').value = reserva.horaSalida;
+        }
+        
         // Guardar el ID para actualización
         document.getElementById('formReserva').dataset.editingId = id;
         
@@ -1427,18 +1973,31 @@ class RentalSystem {
     }
     
     eliminarReserva(id) {
-        if (confirm('¿Estás seguro de eliminar esta reserva?')) {
-            this.reservas = this.reservas.filter(r => r.id !== id);
-            this.guardarDatos();
-            
-            this.generarCalendarioMobile();
-            this.generarListaReservasConIndicadores();
-            this.generarGridDeptos();
-            this.actualizarEstadisticas();
-            this.mostrarRecordatorios();  // Actualizar recordatorios
-            
-            this.mostrarNotificacion('Reserva eliminada', 'success');
-        }
+        const reservaAEliminar = this.reservas.find(r => r.id === id);
+        
+        if (!reservaAEliminar) return;
+        
+        const propiedad = this.propiedades.find(p => p.id == reservaAEliminar.propiedad);
+        
+        this.mostrarConfirm(
+            `¿Estás seguro de eliminar esta reserva?<br><br>` +
+            `<strong>Cliente:</strong> ${reservaAEliminar.cliente.nombre}<br>` +
+            `<strong>Departamento:</strong> ${propiedad.nombre}<br>` +
+            `<strong>Fechas:</strong> ${this.formatearFecha(reservaAEliminar.fechaEntrada)} - ${this.formatearFecha(reservaAEliminar.fechaSalida)}`,
+            () => {
+                // Función que se ejecuta al confirmar
+                this.reservas = this.reservas.filter(r => r.id !== id);
+                this.guardarDatos();
+                
+                this.generarCalendarioMobile();
+                this.generarListaReservasConIndicadores();
+                this.generarGridDeptos();
+                this.actualizarEstadisticas();
+                this.mostrarRecordatorios();
+                
+                this.mostrarNotificacion('Reserva eliminada', 'success');
+            }
+        );
     }
     
     buscarCliente(termino) {
@@ -1646,16 +2205,18 @@ class RentalSystem {
         // Crear modal temporal para checklist
         const modal = document.createElement('div');
         modal.className = 'modal active';
+        modal.style.display = 'flex';
+        
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
                     <h2><i class="fas fa-clipboard-check"></i> Checklist de Preparación</h2>
-                    <button class="btn-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+                    <button class="btn-close" id="btnCerrarChecklistGeneral">&times;</button>
                 </div>
                 <div class="modal-body">
                     ${checklistContent}
                     <div style="margin-top: 20px; text-align: center;">
-                        <button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        <button class="btn btn-primary" id="btnChecklistListo">
                             <i class="fas fa-check"></i> Listo
                         </button>
                     </div>
@@ -1664,6 +2225,22 @@ class RentalSystem {
         `;
         
         document.body.appendChild(modal);
+        
+        // Event listeners
+        const btnCerrar = modal.querySelector('#btnCerrarChecklistGeneral');
+        const btnListo = modal.querySelector('#btnChecklistListo');
+        
+        const closeModal = () => modal.remove();
+        
+        btnCerrar.addEventListener('click', closeModal);
+        btnListo.addEventListener('click', closeModal);
+        
+        // Cerrar al hacer clic en el overlay
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
     }
     
     generarChecklistItems(items) {
