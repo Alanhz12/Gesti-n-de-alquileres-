@@ -213,17 +213,25 @@ body {
     font-weight: 500;
 }
 
-/* Controles de Vista */
+/* Controles de Vista MEJORADOS */
 .view-controls {
     display: flex;
     background: var(--gray-light);
     margin: 0 20px 20px;
     border-radius: 12px;
     padding: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.view-controls::-webkit-scrollbar {
+    display: none;
 }
 
 .view-btn {
-    flex: 1;
+    flex: 1 0 auto;
+    min-width: 100px;
     padding: 12px;
     border: none;
     background: none;
@@ -237,6 +245,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .view-btn.active {
@@ -289,6 +298,7 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 /* Search Box Mejorado */
@@ -324,28 +334,14 @@ body {
     box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-/* Lista de Reservas Mejorada */
+/* ====== LISTA DE RESERVAS CORREGIDA (SIN CORTE) ====== */
 .reservas-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-height: 500px;
-    overflow-y: auto;
+    max-height: none; /* Eliminado el límite fijo */
+    overflow-y: visible; /* Cambiado a visible */
     padding-right: 8px;
-}
-
-.reservas-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.reservas-list::-webkit-scrollbar-track {
-    background: var(--gray-light);
-    border-radius: 10px;
-}
-
-.reservas-list::-webkit-scrollbar-thumb {
-    background: var(--gray);
-    border-radius: 10px;
 }
 
 .reserva-item {
@@ -355,7 +351,8 @@ body {
     border: 2px solid var(--gray-light);
     transition: var(--transition);
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Cambiado a visible */
+    min-height: auto;
 }
 
 .reserva-item::before {
@@ -377,9 +374,11 @@ body {
 
 .reserva-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 16px;
+    gap: 12px;
 }
 
 .reserva-cliente {
@@ -389,11 +388,13 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .reserva-cliente i {
     color: var(--primary);
     font-size: 14px;
+    flex-shrink: 0;
 }
 
 .reserva-depto {
@@ -404,12 +405,13 @@ body {
     color: white;
     min-width: 80px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .reserva-fechas {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     color: var(--gray);
     font-size: 14px;
     margin-bottom: 12px;
@@ -426,7 +428,7 @@ body {
     color: var(--gray);
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
@@ -434,6 +436,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: nowrap;
 }
 
 .reserva-acciones {
@@ -442,6 +445,7 @@ body {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--gray-light);
+    flex-wrap: wrap;
 }
 
 .btn-small {
@@ -455,6 +459,7 @@ body {
     align-items: center;
     gap: 6px;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .btn-danger {
@@ -477,7 +482,7 @@ body {
     box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
 }
 
-/* ===== CORRECCIONES PARA CALENDARIO ===== */
+/* ===== CALENDARIO MÓVIL MEJORADO ===== */
 .month-controls {
     display: flex;
     align-items: center;
@@ -488,6 +493,8 @@ body {
     border: 2px solid var(--gray-light);
     margin-bottom: 20px;
     width: 100%;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .month-controls h3 {
@@ -496,11 +503,17 @@ body {
     color: var(--dark);
     text-align: center;
     flex: 1;
+    min-width: 120px;
+    margin: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .month-nav {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .month-nav-btn {
@@ -516,6 +529,7 @@ body {
     cursor: pointer;
     transition: var(--transition);
     font-weight: bold;
+    flex-shrink: 0;
 }
 
 .month-nav-btn:hover {
@@ -523,35 +537,40 @@ body {
     color: white;
 }
 
-/* Calendario Móvil Optimizado */
+/* Calendario Móvil Optimizado - CORREGIDO */
 .mobile-calendar {
     background: white;
     border-radius: 16px;
     border: 2px solid var(--gray-light);
-    padding: 20px;
+    padding: 16px;
     margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .week-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 4px;
+    margin-bottom: 12px;
     text-align: center;
+    min-width: 280px;
 }
 
 .week-day {
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--gray);
-    padding: 8px;
+    padding: 6px 2px;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .month-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    gap: 4px;
+    min-width: 280px;
 }
 
 .calendar-day {
@@ -560,13 +579,14 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
+    border-radius: 10px;
     border: 2px solid transparent;
     background: white;
     cursor: pointer;
     transition: var(--transition);
     position: relative;
     padding: 4px;
+    min-height: 40px;
 }
 
 .calendar-day:hover {
@@ -582,7 +602,6 @@ body {
     opacity: 0.3;
 }
 
-/* ===== MEJORAS EN CALENDARIO MOBILE ===== */
 .calendar-day.occupied {
     background: rgba(247, 37, 133, 0.1);
     border-color: #f72585;
@@ -599,7 +618,12 @@ body {
     border-color: #ff9800;
 }
 
-/* Estilos para días con check-in y check-out */
+.calendar-day.completed {
+    opacity: 0.5;
+    background: rgba(158, 158, 158, 0.1);
+    border-color: #9e9e9e;
+}
+
 .calendar-day.checkin-checkout-same-day {
     background: linear-gradient(
         135deg,
@@ -646,7 +670,7 @@ body {
 }
 
 .calendar-day-number {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     margin-bottom: 2px;
 }
@@ -656,12 +680,14 @@ body {
     gap: 3px;
     margin-top: 2px;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 /* Iconos para eventos dobles */
@@ -673,13 +699,14 @@ body {
 }
 
 .event-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 7px;
+    flex-shrink: 0;
 }
 
 .checkin-icon {
@@ -695,12 +722,16 @@ body {
 /* Selector de Departamentos para Calendario */
 .depto-selector {
     margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .depto-filter {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 8px;
+    min-width: min-content;
 }
 
 .filter-btn {
@@ -716,6 +747,8 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .filter-btn.active {
@@ -728,6 +761,169 @@ body {
     width: 12px;
     height: 12px;
     border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ===== NUEVA SECCIÓN: HISTORIAL DE RESERVAS ===== */
+.historial-container {
+    display: none;
+    padding: 0 20px 20px;
+}
+
+.historial-container.active {
+    display: block;
+}
+
+.historial-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: white;
+    border-radius: 16px;
+    border: 2px solid var(--gray-light);
+}
+
+.historial-filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 150px;
+    flex: 1;
+}
+
+.historial-filtro-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.historial-select {
+    padding: 10px 12px;
+    border: 2px solid var(--gray-light);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    background: white;
+    transition: var(--transition);
+}
+
+.historial-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.historial-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.historial-stat-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid var(--gray-light);
+    text-align: center;
+}
+
+.historial-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.historial-stat-label {
+    font-size: 13px;
+    color: var(--gray);
+}
+
+.historial-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.historial-item {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    border: 2px solid var(--gray-light);
+    transition: var(--transition);
+}
+
+.historial-item:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.historial-item-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.historial-cliente {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.historial-estado {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.historial-estado.completada {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.historial-estado.cancelada {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.historial-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.historial-info-item {
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.historial-info-item strong {
+    display: block;
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 4px;
+}
+
+.historial-info-item span {
+    font-size: 14px;
+    color: var(--dark);
 }
 
 /* Vista de Cuadrícula */
@@ -914,18 +1110,14 @@ body {
     background: white;
     border-radius: 16px;
     border: 2px solid var(--gray-light);
+    overflow-x: auto;
 }
 
 .leyenda-items {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: nowrap;
     gap: 12px;
-}
-
-@media (min-width: 768px) {
-    .leyenda-items {
-        grid-template-columns: repeat(4, 1fr);
-    }
+    min-width: min-content;
 }
 
 .leyenda-item {
@@ -938,6 +1130,8 @@ body {
     border: 2px solid var(--gray-light);
     transition: var(--transition);
     cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .leyenda-item:hover {
@@ -1259,7 +1453,53 @@ body {
     line-height: 1.5;
 }
 
-/* Responsive Mejorado */
+/* ===== MEJORAS ESPECÍFICAS PARA CALENDARIO MÓVIL ===== */
+@media (max-width: 480px) {
+    .mobile-calendar {
+        padding: 12px;
+        margin: 0 -16px 20px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .week-header {
+        min-width: 100%;
+        gap: 2px;
+    }
+    
+    .week-day {
+        font-size: 10px;
+        padding: 4px 1px;
+    }
+    
+    .month-grid {
+        min-width: 100%;
+        gap: 2px;
+    }
+    
+    .calendar-day {
+        min-height: 35px;
+        aspect-ratio: 1.1;
+        padding: 2px;
+    }
+    
+    .calendar-day-number {
+        font-size: 11px;
+    }
+    
+    .double-event-icons {
+        flex-direction: column;
+        gap: 1px;
+    }
+    
+    .event-icon {
+        width: 12px;
+        height: 12px;
+        font-size: 6px;
+    }
+}
+
 @media (max-width: 768px) {
     .header {
         padding: 16px;
@@ -1374,6 +1614,14 @@ body {
         min-width: 280px;
         padding: 14px 20px;
     }
+    
+    .historial-filtros {
+        flex-direction: column;
+    }
+    
+    .historial-filtro-group {
+        min-width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1381,21 +1629,14 @@ body {
         grid-template-columns: 1fr;
     }
     
-    .week-day {
-        font-size: 11px;
-        padding: 4px;
-    }
-    
-    .calendar-day {
-        aspect-ratio: 1;
-    }
-    
-    .calendar-day-number {
-        font-size: 12px;
-    }
-    
     .leyenda-items {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .leyenda-item {
+        padding: 8px;
     }
 }
 
@@ -1445,8 +1686,8 @@ body {
 
 /* Scroll personalizado */
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -1463,12 +1704,12 @@ body {
     background: var(--primary);
 }
 
-/* Sistema de Recordatorios */
+/* ===== SISTEMA DE RECORDATORIOS - CORREGIDO PARA MÓVILES ===== */
 .recordatorios-panel {
     position: fixed;
     bottom: 100px;
-    right: 32px;
-    width: 320px;
+    right: 16px;
+    left: 16px;
     background: white;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
@@ -1477,6 +1718,8 @@ body {
     animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 2px solid var(--primary);
     overflow: hidden;
+    width: auto;
+    max-width: none;
 }
 
 .recordatorios-panel.show {
@@ -1521,7 +1764,7 @@ body {
 }
 
 .recordatorios-list {
-    max-height: 400px;
+    max-height: 300px;
     overflow-y: auto;
     padding: 0;
 }
@@ -1531,6 +1774,8 @@ body {
     border-bottom: 1px solid var(--gray-light);
     transition: var(--transition);
     cursor: pointer;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .recordatorio-item:hover {
@@ -1581,6 +1826,7 @@ body {
     color: var(--gray);
     margin-bottom: 8px;
     line-height: 1.4;
+    word-wrap: break-word;
 }
 
 .recordatorio-depto {
@@ -1605,6 +1851,7 @@ body {
     display: flex;
     gap: 8px;
     margin-top: 12px;
+    flex-wrap: wrap;
 }
 
 .btn-recordatorio {
@@ -1618,6 +1865,7 @@ body {
     align-items: center;
     gap: 5px;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .btn-marcar-como {
@@ -1655,7 +1903,7 @@ body {
     gap: 6px;
 }
 
-/* Badge de recordatorios */
+/* Badge de recordatorios - también mejorado para móviles */
 .badge-recordatorios {
     position: fixed;
     bottom: 32px;
@@ -1699,6 +1947,74 @@ body {
     align-items: center;
     justify-content: center;
     border: 2px solid white;
+}
+
+/* Para pantallas muy pequeñas (menos de 375px) */
+@media (max-width: 374px) {
+    .recordatorios-panel {
+        bottom: 80px;
+        right: 12px;
+        left: 12px;
+        border-radius: 12px;
+    }
+    
+    .recordatorios-header {
+        padding: 12px 16px;
+    }
+    
+    .recordatorios-header h3 {
+        font-size: 14px;
+    }
+    
+    .recordatorios-list {
+        max-height: 250px;
+    }
+    
+    .recordatorio-item {
+        padding: 12px 16px;
+    }
+    
+    .recordatorio-titulo {
+        font-size: 13px;
+    }
+    
+    .recordatorio-descripcion {
+        font-size: 12px;
+    }
+    
+    .badge-recordatorios {
+        bottom: 24px;
+        left: 24px;
+        width: 52px;
+        height: 52px;
+        font-size: 18px;
+    }
+    
+    .badge-recordatorios span {
+        top: -4px;
+        right: -4px;
+        font-size: 11px;
+        min-width: 18px;
+        height: 18px;
+    }
+}
+
+/* Para pantallas entre 375px y 425px */
+@media (min-width: 375px) and (max-width: 425px) {
+    .recordatorios-panel {
+        bottom: 90px;
+        right: 16px;
+        left: 16px;
+    }
+}
+
+/* Para pantallas más grandes que 426px */
+@media (min-width: 426px) {
+    .recordatorios-panel {
+        width: 320px;
+        right: 32px;
+        left: auto;
+    }
 }
 
 /* Modal de recordatorio extendido */
@@ -1752,6 +2068,7 @@ body {
     color: #ff8f00;
     margin-left: 10px;
     cursor: help;
+    flex-shrink: 0;
 }
 
 /* ===== ESTILOS PARA ALERTS Y PROMPT PERSONALIZADOS ===== */
@@ -1903,6 +2220,307 @@ body {
     font-size: 15px;
     margin-bottom: 4px;
     color: var(--dark);
+}
+
+/* ===== BUSCADOR DE DISPONIBILIDAD RÁPIDA ===== */
+.disponibilidad-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.disponibilidad-resultados {
+    background: white;
+    border-radius: 16px;
+    border: 2px solid var(--gray-light);
+    padding: 20px;
+    margin-top: 16px;
+    animation: fadeIn 0.3s ease;
+}
+
+.resultado-disponibilidad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gray-light);
+}
+
+.resultado-disponibilidad-header h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.resultado-dias {
+    font-size: 14px;
+    color: var(--gray);
+    background: var(--gray-light);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.deptos-disponibles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.depto-disponible-card {
+    background: white;
+    border: 2px solid var(--gray-light);
+    border-radius: 12px;
+    padding: 16px;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.depto-disponible-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(67, 97, 238, 0.1);
+}
+
+.depto-disponible-card.disponible {
+    border-left: 4px solid #4caf50;
+}
+
+.depto-disponible-card.parcial {
+    border-left: 4px solid #ff9800;
+}
+
+.depto-disponible-card.no-disponible {
+    border-left: 4px solid #f72585;
+    opacity: 0.7;
+}
+
+.depto-disponible-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.depto-disponible-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.depto-disponible-nombre {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--dark);
+    flex: 1;
+}
+
+.depto-disponible-estado {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.estado-disponible {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.estado-parcial {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.estado-no-disponible {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.depto-disponible-info {
+    font-size: 13px;
+    color: var(--gray);
+    margin-bottom: 8px;
+}
+
+.depto-disponible-info strong {
+    color: var(--dark);
+    font-weight: 600;
+}
+
+.depto-disponible-acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-reservar-disponible {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--primary);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    flex: 1;
+    justify-content: center;
+}
+
+.btn-reservar-disponible:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-ver-calendario {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 2px solid var(--gray-light);
+    background: white;
+    color: var(--dark);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.btn-ver-calendario:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Sugerencias de fechas */
+.sugerencias-disponibilidad {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.sugerencias-disponibilidad h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lista-sugerencias {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sugerencia-item {
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--gray-light);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sugerencia-item:hover {
+    border-color: var(--primary);
+    background: #e3f2fd;
+}
+
+.sugerencia-fechas {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 4px;
+}
+
+.sugerencia-deptos {
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.sugerencia-deptos span {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+/* Mensajes de error/éxito */
+.mensaje-disponibilidad {
+    padding: 16px;
+    border-radius: 12px;
+    margin-top: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mensaje-disponibilidad.info {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-left: 4px solid #2196f3;
+}
+
+.mensaje-disponibilidad.error {
+    background: #ffebee;
+    color: #c62828;
+    border-left: 4px solid #f44336;
+}
+
+.mensaje-disponibilidad.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-left: 4px solid #4caf50;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .deptos-disponibles-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .disponibilidad-fechas {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .disponibilidad-fechas > div:nth-child(2) {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .disponibilidad-header {
+        padding: 12px;
+    }
+    
+    .depto-disponible-card {
+        padding: 12px;
+    }
+    
+    .depto-disponible-acciones {
+        flex-direction: column;
+    }
+    
+    .btn-reservar-disponible,
+    .btn-ver-calendario {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* Responsive */

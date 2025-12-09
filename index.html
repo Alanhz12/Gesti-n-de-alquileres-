@@ -80,6 +80,9 @@
             <button class="view-btn" id="viewGridBtn">
                 <i class="fas fa-th-large"></i> Cuadrícula
             </button>
+            <button class="view-btn" id="viewHistoryBtn">
+                <i class="fas fa-history"></i> Historial
+            </button>
         </div>
 
         <!-- Vista de Lista (Predeterminada) -->
@@ -97,50 +100,85 @@
         </div>
 
         <!-- Vista de Calendario Móvil -->
-        <div class="view-container" id="calendarView">
-            <div class="view-header">
-                <h2><i class="far fa-calendar-alt"></i> Calendario de Ocupación</h2>
+<div class="view-container" id="calendarView">
+    <div class="view-header">
+        <h2><i class="far fa-calendar-alt"></i> Calendario de Ocupación</h2>
+    </div>
+    
+<!-- ===== NUEVO: BUSCADOR RÁPIDO DE DISPONIBILIDAD ===== -->
+<div class="disponibilidad-rapida" style="margin-bottom: 20px;">
+    <div class="disponibilidad-header" style="background: #e3f2fd; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px;">
+        <h3 style="font-size: 14px; font-weight: 600; color: #1565c0; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-search"></i> Buscar Disponibilidad Rápida
+        </h3>
+        <div class="disponibilidad-fechas" style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center;">
+            <div>
+                <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 500;">Desde</label>
+                <input type="date" id="fechaDesdeBusqueda" class="disponibilidad-input" style="width: 100%; padding: 10px; border: 2px solid #bbdefb; border-radius: 8px; font-size: 14px;">
             </div>
-            
-            <!-- Nuevos controles de mes -->
-            <div class="month-controls">
-                <div class="month-nav">
-                    <button id="prevMonth" class="month-nav-btn" title="Mes anterior">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                </div>
-                <h3 id="mesActual">Enero 2024</h3>
-                <div class="month-nav">
-                    <button id="nextMonth" class="month-nav-btn" title="Mes siguiente">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
+            <div style="text-align: center; color: #1565c0; font-weight: 500; font-size: 12px;">
+                <i class="fas fa-arrow-right"></i>
             </div>
-            
-            <!-- Selector de Departamento para Calendario -->
-            <div class="depto-selector">
-                <div class="depto-filter" id="deptoFilters">
-                    <!-- Filtros se generan dinámicamente -->
-                </div>
-            </div>
-            
-            <!-- Calendario Móvil Optimizado -->
-            <div class="mobile-calendar">
-                <div class="week-header" id="weekHeader">
-                    <!-- Encabezado de días de la semana -->
-                </div>
-                <div class="month-grid" id="monthGrid">
-                    <!-- Calendario móvil se genera dinámicamente -->
-                </div>
-            </div>
-            
-            <!-- Leyenda -->
-            <div class="propiedades-leyenda">
-                <div class="leyenda-items" id="leyendaPropiedades">
-                    <!-- Leyenda se genera dinámicamente -->
-                </div>
+            <div>
+                <label style="display: block; font-size: 12px; color: #1565c0; margin-bottom: 4px; font-weight: 500;">Hasta</label>
+                <input type="date" id="fechaHastaBusqueda" class="disponibilidad-input" style="width: 100%; padding: 10px; border: 2px solid #bbdefb; border-radius: 8px; font-size: 14px;">
             </div>
         </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="btn btn-primary" id="btnBuscarDisponibilidad" style="flex: 1; padding: 10px; font-size: 14px;">
+                <i class="fas fa-search"></i> Buscar Disponibilidad
+            </button>
+            <button class="btn btn-secondary" id="btnLimpiarBusqueda" style="padding: 10px 16px; font-size: 14px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Resultados de la búsqueda -->
+    <div class="resultados-disponibilidad" id="resultadosDisponibilidad" style="display: none;">
+        <!-- Resultados se cargan aquí -->
+    </div>
+</div>
+    
+    <!-- Nuevos controles de mes -->
+    <div class="month-controls">
+        <div class="month-nav">
+            <button id="prevMonth" class="month-nav-btn" title="Mes anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+        <h3 id="mesActual">Enero 2024</h3>
+        <div class="month-nav">
+            <button id="nextMonth" class="month-nav-btn" title="Mes siguiente">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Selector de Departamento para Calendario -->
+    <div class="depto-selector">
+        <div class="depto-filter" id="deptoFilters">
+            <!-- Filtros se generan dinámicamente -->
+        </div>
+    </div>
+    
+    <!-- Calendario Móvil Optimizado -->
+    <div class="mobile-calendar">
+        <div class="week-header" id="weekHeader">
+            <!-- Encabezado de días de la semana -->
+        </div>
+        <div class="month-grid" id="monthGrid">
+            <!-- Calendario móvil se genera dinámicamente -->
+        </div>
+    </div>
+    
+    <!-- Leyenda -->
+    <div class="propiedades-leyenda">
+        <div class="leyenda-items" id="leyendaPropiedades">
+            <!-- Leyenda se genera dinámicamente -->
+        </div>
+    </div>
+</div>
 
         <!-- Vista de Cuadrícula (Overview) -->
         <div class="view-container" id="gridView">
@@ -150,6 +188,73 @@
             
             <div class="grid-container" id="deptosGrid">
                 <!-- Cuadrícula se genera dinámicamente -->
+            </div>
+        </div>
+
+        <!-- ===== NUEVA SECCIÓN: HISTORIAL DE RESERVAS ===== -->
+        <div class="view-container" id="historyView">
+            <div class="view-header">
+                <h2><i class="fas fa-history"></i> Historial de Reservas</h2>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="buscarHistorial" placeholder="Buscar en historial...">
+                </div>
+            </div>
+            
+            <!-- Filtros de Historial -->
+            <div class="historial-filtros">
+                <div class="historial-filtro-group">
+                    <label for="filtroDeptoHistorial"><i class="fas fa-building"></i> Departamento</label>
+                    <select id="filtroDeptoHistorial" class="historial-select">
+                        <option value="0">Todos los departamentos</option>
+                    </select>
+                </div>
+                
+                <div class="historial-filtro-group">
+                    <label for="filtroMesHistorial"><i class="fas fa-calendar"></i> Mes</label>
+                    <select id="filtroMesHistorial" class="historial-select">
+                        <option value="0">Todos los meses</option>
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+                
+                <div class="historial-filtro-group">
+                    <label for="filtroAnoHistorial"><i class="fas fa-calendar-alt"></i> Año</label>
+                    <select id="filtroAnoHistorial" class="historial-select">
+                        <option value="0">Todos los años</option>
+                    </select>
+                </div>
+                
+                <div class="historial-filtro-group">
+                    <label for="filtroEstadoHistorial"><i class="fas fa-check-circle"></i> Estado</label>
+                    <select id="filtroEstadoHistorial" class="historial-select">
+                        <option value="todas">Todas las reservas</option>
+                        <option value="completadas">Completadas</option>
+                        <option value="canceladas">Canceladas</option>
+                        <option value="activas">Activas</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Estadísticas del Historial -->
+            <div class="historial-stats" id="historialStats">
+                <!-- Estadísticas se generan dinámicamente -->
+            </div>
+            
+            <!-- Lista de Historial -->
+            <div class="historial-list" id="listaHistorial">
+                <!-- Historial se genera dinámicamente -->
             </div>
         </div>
 
@@ -165,7 +270,7 @@
                 <button class="fab-secondary" onclick="sistema.mostrarChecklist()" title="Checklist">
                     <i class="fas fa-clipboard-check"></i>
                 </button>
-                <button class="fab-secondary" onclick="sistema.exportarDatos()" title="Exportar">
+                <button class="fab-secondary" onclick="sistema.exportarHistorial()" title="Exportar Historial">
                     <i class="fas fa-download"></i>
                 </button>
             </div>
@@ -227,7 +332,23 @@
                             <option value="12:00">12:00 PM</option>
                         </select>
                     </div>
-                    
+                     <!-- NUEVO CAMPO: Cantidad de Personas -->
+                    <div class="form-group">
+                        <label for="cantidadPersonas"><i class="fas fa-users"></i> Cantidad de Personas</label>
+                        <select id="cantidadPersonas" required>
+                            <option value="1">1 persona</option>
+                            <option value="2" selected>2 personas</option>
+                            <option value="3">3 personas</option>
+                            <option value="4">4 personas</option>
+                            <option value="5">5 personas</option>
+                            <option value="6">6 personas</option>
+                            <option value="7">7 personas</option>
+                            <option value="8">8 personas</option>
+                            <option value="9">9 personas</option>
+                            <option value="10">10 personas</option>
+                            <option value="11">11+ personas</option>
+                        </select>
+                    </div>
                     <div class="form-group full-width">
                         <label for="nombreCliente"><i class="fas fa-user"></i> Nombre Completo</label>
                         <input type="text" id="nombreCliente" placeholder="Ej: Juan Pérez" required>
@@ -333,7 +454,7 @@
             <!-- Recordatorios se generan dinámicamente -->
         </div>
         <div class="recordatorios-footer">
-            <small><i class="fas fa-info-circle"></i> Recordatorios automáticos de limpieza</small>
+            <small><i class="fas fa-info-circle"></i> Recordatorios automáticos de limpieza y preparación</small>
         </div>
     </div>
 
